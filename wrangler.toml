@@ -3,7 +3,7 @@ main = "src/index.js"
 compatibility_date = "2024-01-01"
 
 [vars]
-ISSUER = "https://jwtforge.example.com"
+ISSUER = "https://jwtforge.dev"
 # Set to "true" to use Durable Objects instead of KV (requires Workers Paid Plan)
 # USE_DURABLE_OBJECTS = "false"
 
@@ -27,7 +27,7 @@ ISSUER = "https://jwtforge.example.com"
 # Uncomment to use KV storage (recommended)
 [[kv_namespaces]]
 binding = "KEYSTORE_KV"
-id = "your-kv-namespace-id"  # Run: wrangler kv:namespace create KEYSTORE_KV
+id = "jwtforge"  # Run: wrangler kv:namespace create KEYSTORE_KV
 
 # Durable Objects binding (Optional, Paid Plan)
 # Uncomment and set USE_DURABLE_OBJECTS="true" to use Durable Objects
