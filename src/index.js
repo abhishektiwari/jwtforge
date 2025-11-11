@@ -3,25 +3,24 @@
  * Provides JWT tokens with OIDC/OAuth2 claims, JWKS endpoint, and discovery endpoint
  */
 
-import { KeyStore } from './keystore.js';
+import { KeyStore } from './durable.js';
 import { handleOpenAPIRequest, handleRootRequest } from './openapi.js';
+import { getKeyStorage } from './storage.js';
 
-// In-memory cache for local development (when Durable Objects are not available)
+// In-memory cache for local development (when KV/Durable Objects are not available)
 const memoryCache = new Map();
 
 /**
- * Get or create key data from Durable Object or memory cache
- * Returns the current signing key (with automatic rotation in Durable Objects)
+ * Get or create key data from storage backend (KV, Durable Objects, or memory cache)
+ * Returns the current signing key (with automatic rotation)
  */
 async function getKeyData(env, kty = 'RSA') {
   const kid = `${kty.toLowerCase()}-key-1`;
 
-  // Use Durable Objects in production (when env.KEYSTORE is available)
-  if (env && env.KEYSTORE) {
-    const id = env.KEYSTORE.idFromName('default');
-    const stub = env.KEYSTORE.get(id);
-    const response = await stub.fetch(`http://keystore/?kty=${kty}`);
-    const keyData = await response.json();
+  // Use configured storage backend (KV or Durable Objects)
+  if (env && (env.KEYSTORE_KV || env.KEYSTORE_DURABLE)) {
+    const storage = getKeyStorage(env);
+    const keyData = await storage.getCurrentKey(kty);
     return keyData;
   }
 
@@ -37,16 +36,14 @@ async function getKeyData(env, kty = 'RSA') {
 }
 
 /**
- * Get all active keys from Durable Object or memory cache
+ * Get all active keys from storage backend (KV, Durable Objects, or memory cache)
  * Returns current key + keys in grace period (for JWKS)
  */
 async function getAllActiveKeys(env, kty = 'RSA') {
-  // Use Durable Objects in production (when env.KEYSTORE is available)
-  if (env && env.KEYSTORE) {
-    const id = env.KEYSTORE.idFromName('default');
-    const stub = env.KEYSTORE.get(id);
-    const response = await stub.fetch(`http://keystore/list?kty=${kty}`);
-    const keys = await response.json();
+  // Use configured storage backend (KV or Durable Objects)
+  if (env && (env.KEYSTORE_KV || env.KEYSTORE_DURABLE)) {
+    const storage = getKeyStorage(env);
+    const keys = await storage.getActiveKeys(kty);
     return keys;
   }
 

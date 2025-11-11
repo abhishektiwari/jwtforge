@@ -4,10 +4,12 @@ A lightweight JWT token vending service for testing purposes, deployed on Cloudf
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)
 
-**Cloudflare Account** with [Workers Paid Plan](https://workers.cloudflare.com/plans) ($5/month) is required.
+**Free Tier Available** - Works on Cloudflare Workers Free Plan using Workers KV storage
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange.svg)
+![Workers KV](https://img.shields.io/badge/Storage-Workers%20KV%20(Default)-blue.svg)
+![Durable Objects](https://img.shields.io/badge/Storage-Durable%20Objects%20(Optional)-green.svg)
 
 ## Features
 
@@ -19,7 +21,7 @@ A lightweight JWT token vending service for testing purposes, deployed on Cloudf
 - **Custom Claims**: Add any non-standard claims to your tokens
 - **JWKS Endpoint**: Public key discovery at `/.well-known/jwks.json` with all active keys
 - **OIDC Discovery**: OpenID Connect discovery endpoint at `/.well-known/openid-configuration`
-- **Persistent Storage**: Durable Objects for production key persistence, in-memory for local dev
+- **Flexible Storage**: Workers KV (free, default) or Durable Objects (paid, strong consistency)
 - **Zero Dependencies**: Uses Web Crypto API built into Cloudflare Workers
 - **CORS Enabled**: Works with frontend applications
 
@@ -175,7 +177,7 @@ The service supports all standard OIDC and OAuth2 claims. Currently JWTForge doe
 | Claim | Description | Default | Example |
 |-------|-------------|---------|---------|
 | `iss` | Issuer | Your worker URL | `"https://jwtforge.workers.dev"` |
-| `sub` | Subject (user identifier) | `"user123"` | `"user123"`, `"auth0|507f1f77bcf86cd799439011"` |
+| `sub` | Subject (user identifier) | `"user123"` | `"user123"`, `"auth0\|507f1f77bcf86cd799439011"` |
 | `aud` | Audience | `"https://api.example.com"` | `"https://api.example.com"`, `"my-client-id"` |
 | `exp` | Expiration time | Current time + 1 hour | `1735689600` |
 | `nbf` | Not before | Current time | `1735686000` |
@@ -310,7 +312,8 @@ JWTForge offers **two deployment options** to suit different needs:
 
 Click the button above for instant deployment. Perfect for testing and demos.
 
-### 2. Manual Deploy (Recommended)
+### 2. Manual Deploy
+Clone the repository. Then quick setup and deploy.
 
 ```bash
 # Quick setup
@@ -328,12 +331,48 @@ make help       # Show all commands
 
 ### Requirements
 
-- **Cloudflare Account** with [Workers Paid Plan](https://workers.cloudflare.com/plans) ($5/month)
-  - Required for Durable Objects (persistent key storage)
+- **Cloudflare Account** (Free tier works with Workers KV storage)
 - **Node.js 18+** (for manual deployment)
 - **Wrangler CLI** (installed automatically with `make install`)
 
+### Switching to Durable Objects (Optional)
+
+By default, JWTForge uses **Workers KV** (free tier). To switch to **Durable Objects** for strong consistency:
+
+**Requirements:**
+- [Workers Paid Plan](https://workers.cloudflare.com/plans) ($5/month)
+
+**Setup Steps:**
+
+1. **Enable Durable Objects in wrangler.toml:**
+```toml
+[vars]
+USE_DURABLE_OBJECTS = "true"
+
+# Uncomment Durable Objects binding
+[[durable_objects.bindings]]
+name = "KEYSTORE_DURABLE"
+class_name = "KeyStore"
+script_name = "jwtforge"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["KeyStore"]
+
+# Comment out or remove KV binding
+# [[kv_namespaces]]
+# binding = "KEYSTORE_KV"
+# id = "your-kv-namespace-id"
+```
+
+2. **Deploy:**
+```bash
+make deploy
+```
+
 ## Configuration
+
+### Basic Configuration
 
 Edit `wrangler.toml` to customize settings:
 
@@ -344,7 +383,20 @@ compatibility_date = "2024-01-01"
 
 [vars]
 ISSUER = "https://your-domain.com"  # Optional: Set custom issuer
+
+# Workers KV binding (Default, Free Tier)
+[[kv_namespaces]]
+binding = "KEYSTORE_KV"
+id = "your-kv-namespace-id"  # Run: wrangler kv:namespace create KEYSTORE_KV
 ```
+
+### Storage Backend Selection
+
+JWTForge automatically selects the storage backend based on your configuration:
+
+- **Workers KV (Default)**: If `KEYSTORE_KV` binding exists
+- **Durable Objects**: If `USE_DURABLE_OBJECTS="true"` and `KEYSTORE_DURABLE` binding exists
+- **In-Memory**: Fallback for local development with `wrangler dev`
 
 ## Security Considerations
 

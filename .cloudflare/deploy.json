@@ -1,22 +1,12 @@
 {
   "name": "jwtforge",
-  "description": "JWT Token Vending Service for Testing",
+  "description": "JWT Token Vending Service for Testing - Free Tier with Workers KV",
   "repository": "https://github.com/abhishektiwari/jwtforge",
   "compatibility_date": "2024-01-01",
   "main": "src/index.js",
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "KEYSTORE",
-        "class_name": "KeyStore",
-        "script_name": "jwtforge"
-      }
-    ]
-  },
-  "migrations": [
+  "kv_namespaces": [
     {
-      "tag": "v1",
-      "new_classes": ["KeyStore"]
+      "binding": "KEYSTORE_KV"
     }
   ],
   "vars": {

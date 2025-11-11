@@ -4,14 +4,38 @@ compatibility_date = "2024-01-01"
 
 [vars]
 ISSUER = "https://jwtforge.example.com"
+# Set to "true" to use Durable Objects instead of KV (requires Workers Paid Plan)
+# USE_DURABLE_OBJECTS = "false"
 
-# Durable Object bindings for production deployment
-[[durable_objects.bindings]]
-name = "KEYSTORE"
-class_name = "KeyStore"
-script_name = "jwtforge"
+# ============================================================================
+# Storage Configuration
+# ============================================================================
+# JWTForge supports two storage backends:
+#
+# 1. Workers KV (Default, Free Tier) - Recommended for most users
+#    - Free tier: 100,000 reads/day, 1,000 writes/day
+#    - Eventually consistent (up to 60s propagation)
+#    - Good enough for testing/development purposes
+#
+# 2. Durable Objects (Optional, Requires Paid Plan)
+#    - Requires Workers Paid Plan ($5/month)
+#    - Strongly consistent (immediate propagation)
+#    - Better for production-like environments
+# ============================================================================
 
-# Migrations for Durable Objects
-[[migrations]]
-tag = "v1"
-new_classes = ["KeyStore"]
+# Workers KV binding (Default, Free Tier)
+# Uncomment to use KV storage (recommended)
+[[kv_namespaces]]
+binding = "KEYSTORE_KV"
+id = "your-kv-namespace-id"  # Run: wrangler kv:namespace create KEYSTORE_KV
+
+# Durable Objects binding (Optional, Paid Plan)
+# Uncomment and set USE_DURABLE_OBJECTS="true" to use Durable Objects
+# [[durable_objects.bindings]]
+# name = "KEYSTORE_DURABLE"
+# class_name = "KeyStore"
+# script_name = "jwtforge"
+#
+# [[migrations]]
+# tag = "v1"
+# new_classes = ["KeyStore"]

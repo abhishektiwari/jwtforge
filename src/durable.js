@@ -1,6 +1,7 @@
 /**
- * KeyStore Durable Object
- * Persistently stores cryptographic keys for JWT signing with automatic rotation
+ * Durable Objects Storage Implementation
+ * Requires Workers Paid Plan ($5/month)
+ * Strongly consistent storage for cryptographic keys with automatic rotation
  */
 export class KeyStore {
   constructor(state, env) {
