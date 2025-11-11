@@ -24,10 +24,15 @@ ISSUER = "https://jwtforge.dev"
 # ============================================================================
 
 # Workers KV binding (Default, Free Tier)
-# Uncomment to use KV storage (recommended)
+# When using "Import a repository" in Cloudflare UI:
+# - Create/bind KV namespace during import setup
+# - UI will override this empty id
+# When using manual deploy (wrangler deploy):
+# - Run: wrangler kv:namespace create KEYSTORE_KV
+# - Replace empty id with returned namespace ID
 [[kv_namespaces]]
 binding = "KEYSTORE_KV"
-id = "jwtforge"  # Run: wrangler kv:namespace create KEYSTORE_KV
+id = ""
 
 # Durable Objects binding (Optional, Paid Plan)
 # Uncomment and set USE_DURABLE_OBJECTS="true" to use Durable Objects
