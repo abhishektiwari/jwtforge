@@ -111,6 +111,13 @@ export class KVStorage {
     const privateKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.privateKey);
     const publicKeyJwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
 
+    // Clean up exported JWKs - remove fields that might cause import issues
+    delete privateKeyJwk.key_ops;
+    delete publicKeyJwk.key_ops;
+    delete privateKeyJwk.ext;
+    delete publicKeyJwk.ext;
+
+    // Add metadata to public key
     publicKeyJwk.alg = alg;
     publicKeyJwk.use = 'sig';
     publicKeyJwk.kid = kid;
