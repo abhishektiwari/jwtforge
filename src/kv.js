@@ -119,7 +119,6 @@ export class KVStorage {
       kid,
       kty,
       alg,
-      algorithm,
       privateKey: privateKeyJwk,
       publicKey: publicKeyJwk,
       createdAt: new Date().toISOString()

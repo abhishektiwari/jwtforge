@@ -11,5 +11,11 @@
   ],
   "vars": {
     "ISSUER": "https://jwtforge.example.com"
-  }
+  },
+  "routes": [
+    {
+      "pattern": "jwtforge.example.com/*",
+      "custom_domain": true
+    }
+  ]
 }
