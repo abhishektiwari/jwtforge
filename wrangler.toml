@@ -1,0 +1,17 @@
+name = "jwtforge"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[vars]
+ISSUER = "https://jwtforge.example.com"
+
+# Durable Object bindings for production deployment
+[[durable_objects.bindings]]
+name = "KEYSTORE"
+class_name = "KeyStore"
+script_name = "jwtforge"
+
+# Migrations for Durable Objects
+[[migrations]]
+tag = "v1"
+new_classes = ["KeyStore"]
