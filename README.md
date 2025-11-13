@@ -87,7 +87,6 @@ JWTForge uses the standard OAuth2/OIDC `response_type` parameter to specify whic
   "sub": "user123",
   "name": "John Doe",
   "email": "john@example.com",
-  "scope": "openid profile email",
   "nonce": "random-nonce-67890"
 }
 ```
@@ -98,10 +97,7 @@ Response when requesting both tokens:
   "access_token": "eyJhbGciOiJSUzI1NiIs...",
   "id_token": "eyJhbGciOiJSUzI1NiIs...",
   "token_type": "Bearer",
-  "expires_in": 3600,
-  "scope": "openid profile email",
-  "algorithm": "RS256",
-  "key_id": "rsa-key-1"
+  "expires_in": 3600
 }
 ```
 
@@ -152,11 +148,15 @@ curl https://your-worker.workers.dev/.well-known/jwks.json
   "keys": [
     {
       "kty": "RSA",
+      "key_ops": [
+        "verify"
+      ],
+      "alg": "RS256",
+      "ext": true,
       "n": "...",
       "e": "AQAB",
-      "alg": "RS256",
       "use": "sig",
-      "kid": "default-key-1"
+      "kid": "rsa-key-1"
     }
   ]
 }
@@ -362,7 +362,6 @@ new_classes = ["KeyStore"]
 # Comment out or remove KV binding
 # [[kv_namespaces]]
 # binding = "KEYSTORE_KV"
-# id = "your-kv-namespace-id"
 ```
 
 2. **Deploy:**
@@ -387,7 +386,6 @@ ISSUER = "https://your-domain.com"  # Optional: Set custom issuer
 # Workers KV binding (Default, Free Tier)
 [[kv_namespaces]]
 binding = "KEYSTORE_KV"
-id = "your-kv-namespace-id"  # Run: wrangler kv:namespace create KEYSTORE_KV
 ```
 
 ### Storage Backend Selection
