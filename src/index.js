@@ -236,9 +236,7 @@ async function handleTokenRequest(request, env) {
 
     const response = {
       token_type: 'Bearer',
-      expires_in: requestData.exp ? (requestData.exp - Math.floor(Date.now() / 1000)) : 3600,
-      algorithm: keyData.alg,
-      key_id: keyData.kid
+      expires_in: requestData.exp ? (requestData.exp - Math.floor(Date.now() / 1000)) : 3600
     };
 
     // Generate access token
@@ -258,7 +256,6 @@ async function handleTokenRequest(request, env) {
       const idTokenClaims = {
         ...requestData,
         response_type: undefined, // Remove metadata
-        kty: undefined,
         // ID tokens should have nonce if provided
         nonce: requestData.nonce,
         // Add at_hash for hybrid flows if access token is present
@@ -342,13 +339,11 @@ async function handleDiscoveryRequest(request) {
 
   const discoveryDocument = {
     issuer: issuer,
-    authorization_endpoint: `${issuer}/authorize`,
     token_endpoint: `${issuer}/token`,
     jwks_uri: `${issuer}/.well-known/jwks.json`,
     response_types_supported: ['token', 'id_token', 'id_token token', 'token id_token'],
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256', 'ES256'],
-    token_endpoint_auth_methods_supported: ['none'],
     claims_supported: [
       'sub', 'iss', 'aud', 'exp', 'iat', 'nbf', 'jti',
       'name', 'given_name', 'family_name', 'middle_name', 'nickname',

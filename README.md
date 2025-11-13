@@ -1,6 +1,6 @@
 # JWTForge 
 
-A lightweight JWT token vending service for testing purposes, deployed on Cloudflare Workers. Generate JWT tokens with custom OIDC/OAuth2 claims and non-standard claims for your development and testing needs.
+A lightweight JWT token vending service for testing purposes, deployed on Cloudflare Workers. Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs.
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)
 
