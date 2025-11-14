@@ -6,6 +6,7 @@
 import { KeyStore } from './durable.js';
 import { handleOpenAPIRequest, handleRootRequest } from './openapi.js';
 import { getKeyStorage } from './storage.js';
+import { faker } from '@faker-js/faker';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
 const memoryCache = new Map();
@@ -119,6 +120,59 @@ function base64urlEncode(buffer) {
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
     .replace(/=/g, '');
+}
+
+/**
+ * Map OIDC scopes to default claims using faker for realistic test data
+ */
+function getDefaultClaimsFromScope(scope) {
+  const scopes = scope ? scope.toLowerCase().split(' ') : [];
+  const defaultClaims = {};
+
+  // profile scope - personal information
+  if (scopes.includes('profile')) {
+    const firstName = faker.person.firstName();
+    const lastName = faker.person.lastName();
+    defaultClaims.name = faker.person.fullName({ firstName, lastName });
+    defaultClaims.given_name = firstName;
+    defaultClaims.family_name = lastName;
+    defaultClaims.middle_name = faker.person.middleName();
+    defaultClaims.nickname = faker.internet.username({ firstName, lastName });
+    defaultClaims.preferred_username = faker.internet.username({ firstName, lastName });
+    defaultClaims.profile = faker.internet.url() + '/' + faker.internet.username({ firstName, lastName });
+    defaultClaims.picture = faker.image.avatar();
+    defaultClaims.website = faker.internet.url();
+    defaultClaims.gender = faker.person.sex();
+    defaultClaims.birthdate = faker.date.birthdate({ mode: 'age', min: 18, max: 80 }).toISOString().split('T')[0];
+    defaultClaims.zoneinfo = faker.location.timeZone();
+    defaultClaims.locale = faker.location.countryCode('alpha-2') + '-' + faker.location.countryCode('alpha-2');
+    defaultClaims.updated_at = Math.floor(Date.now() / 1000);
+  }
+
+  // email scope - email address and verification
+  if (scopes.includes('email')) {
+    defaultClaims.email = faker.internet.email();
+    defaultClaims.email_verified = faker.datatype.boolean();
+  }
+
+  // address scope - physical address
+  if (scopes.includes('address')) {
+    defaultClaims.address = {
+      street_address: faker.location.streetAddress(),
+      locality: faker.location.city(),
+      region: faker.location.state(),
+      postal_code: faker.location.zipCode(),
+      country: faker.location.countryCode('alpha-2')
+    };
+  }
+
+  // phone scope - phone number and verification
+  if (scopes.includes('phone')) {
+    defaultClaims.phone_number = faker.phone.number();
+    defaultClaims.phone_number_verified = faker.datatype.boolean();
+  }
+
+  return defaultClaims;
 }
 
 /**
@@ -236,13 +290,19 @@ async function handleTokenRequest(request, env) {
 
     const response = {
       token_type: 'Bearer',
-      expires_in: requestData.exp ? (requestData.exp - Math.floor(Date.now() / 1000)) : 3600
+      expires_in: requestData.exp ? (requestData.exp - Math.floor(Date.now() / 1000)) : 3600,
+      algorithm: keyData.alg,
+      key_id: keyData.kid
     };
+
+    // Get default claims based on requested scopes
+    const scopeDefaults = getDefaultClaimsFromScope(requestData.scope);
 
     // Generate access token
     if (shouldGenerateAccessToken) {
       const accessTokenClaims = {
-        ...requestData,
+        ...scopeDefaults,    // Default claims from scopes
+        ...requestData,      // User-provided claims (override defaults)
         response_type: undefined, // Remove metadata
         kty: undefined
       };
@@ -254,8 +314,10 @@ async function handleTokenRequest(request, env) {
     if (shouldGenerateIdToken) {
       // ID tokens have specific OIDC requirements
       const idTokenClaims = {
-        ...requestData,
+        ...scopeDefaults,    // Default claims from scopes
+        ...requestData,      // User-provided claims (override defaults)
         response_type: undefined, // Remove metadata
+        kty: undefined,
         // ID tokens should have nonce if provided
         nonce: requestData.nonce,
         // Add at_hash for hybrid flows if access token is present
@@ -265,8 +327,10 @@ async function handleTokenRequest(request, env) {
       response.id_token = idToken;
     }
 
-    // If requesting both, also include scope
-    if (shouldGenerateAccessToken && shouldGenerateIdToken && !response.scope) {
+    // Include scope from request or default for hybrid flows
+    if (requestData.scope) {
+      response.scope = requestData.scope;
+    } else if (shouldGenerateAccessToken && shouldGenerateIdToken) {
       response.scope = 'openid profile email';
     }
 
@@ -344,6 +408,7 @@ async function handleDiscoveryRequest(request) {
     response_types_supported: ['token', 'id_token', 'id_token token', 'token id_token'],
     subject_types_supported: ['public'],
     id_token_signing_alg_values_supported: ['RS256', 'ES256'],
+    scopes_supported: ['openid', 'profile', 'email', 'address', 'phone'],
     claims_supported: [
       'sub', 'iss', 'aud', 'exp', 'iat', 'nbf', 'jti',
       'name', 'given_name', 'family_name', 'middle_name', 'nickname',

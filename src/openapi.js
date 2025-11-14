@@ -12,7 +12,7 @@ export function getOpenAPISpec(baseUrl) {
       title: 'JWTForge',
       description: `JWT Token Vending Service for Testing
 
-Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs. 🚨🚨 Do not use in production environments 🚨🚨.
+Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs. 🚨🚨 Do not use in production environments 🚨🚨.  Use it for **fuzzing**, **end-to-end**, **penetration testing** of OIDC/OAuth2 applications and services. 
 
 Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
 
@@ -230,14 +230,16 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                       },
                       scope: {
                         type: 'string',
-                        description: 'Granted scopes (present if response_type is "id_token token")'
+                        description: 'OAuth2 scopes (included if provided in request or defaults to "openid profile email" for hybrid flows)'
                       },
                       algorithm: {
                         type: 'string',
+                        example: 'RS256',
                         description: 'Algorithm used for signing (RS256 or ES256)'
                       },
                       key_id: {
                         type: 'string',
+                        example: 'rsa-key-1',
                         description: 'Key ID (kid) used for signing'
                       }
                     }

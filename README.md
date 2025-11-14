@@ -1,29 +1,32 @@
 # JWTForge 
 
-A lightweight JWT token vending service for testing purposes, deployed on Cloudflare Workers. Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs.
+A lightweight JWT token vending service for testing purposes, deployed on Cloudflare Workers. Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs. Use it for **fuzzing**, **end-to-end**, **penetration testing** of OIDC/OAuth2 application and services. Dig deeper by testing for unexpected values and claims to identify unexpected applications and service behaviours.
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)
 
-**Free Tier Available** - Works on Cloudflare Workers Free Plan using Workers KV storage
+Works on Cloudflare Workers Free Plan using Workers KV storage.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange.svg)
 ![Workers KV](https://img.shields.io/badge/Storage-Workers%20KV%20(Default)-blue.svg)
 ![Durable Objects](https://img.shields.io/badge/Storage-Durable%20Objects%20(Optional)-green.svg)
+![Faker.js](https://img.shields.io/badge/Test%20Data-Faker.js-yellow.svg)
 
-## Features
+## Supports
 
-- **OAuth2/OIDC Response Types**: Standard `response_type` parameter (token, id_token, id_token token)
-- **Multiple Key Types**: Support for RSA (RS256) and EC (ES256) algorithms
-- **Automatic Key Rotation**: Keys rotate every 24 hours with 6-hour grace period (production)
-- **JWT Token Generation**: Create signed JWT tokens with configurable key types
-- **OIDC/OAuth2 Claims Support**: Standard claims (iss, sub, aud, exp, iat, etc.)
-- **Custom Claims**: Add any non-standard claims to your tokens
-- **JWKS Endpoint**: Public key discovery at `/.well-known/jwks.json` with all active keys
-- **OIDC Discovery**: OpenID Connect discovery endpoint at `/.well-known/openid-configuration`
-- **Flexible Storage**: Workers KV (free, default) or Durable Objects (paid, strong consistency)
-- **Zero Dependencies**: Uses Web Crypto API built into Cloudflare Workers
-- **CORS Enabled**: Works with frontend applications
+- OAuth2/OIDC Response Types: Standard `response_type` parameter (token, id_token, id_token token)
+- OIDC Scope Support: Automatic claim population based on scopes (openid, profile, email, address, phone)
+- Realistic Test Data: Uses faker.js for generating authentic-looking user data
+- Multiple Key Types: Support for RSA (RS256) and EC (ES256) algorithms
+- Automatic Key Rotation: Keys rotate every 24 hours with 6-hour grace period (production)
+- JWT Token Generation: Create signed JWT tokens with configurable key types
+- OIDC/OAuth2 Claims Support: Standard claims (iss, sub, aud, exp, iat, etc.)
+- Custom Claims: Add any non-standard claims to your tokens
+- JWKS Endpoint: Public key discovery at `/.well-known/jwks.json` with all active keys
+- OIDC Discovery: OpenID Connect discovery endpoint at `/.well-known/openid-configuration`
+- Flexible Storage: Workers KV (free, default) or Durable Objects (paid, strong consistency)
+- Lightweight: Uses Web Crypto API built into Cloudflare Workers + faker.js for test data
+- CORS Enabled: Works with frontend applications
 
 ## Key Types and Algorithms
 
@@ -64,7 +67,8 @@ JWTForge uses the standard OAuth2/OIDC `response_type` parameter to specify whic
   "response_type": "token",
   "sub": "user123",
   "scope": "read write",
-  "aud": "https://api.example.com"
+  "aud": "https://api.example.com",
+  "jti": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -76,7 +80,8 @@ JWTForge uses the standard OAuth2/OIDC `response_type` parameter to specify whic
   "name": "John Doe",
   "email": "john@example.com",
   "email_verified": true,
-  "nonce": "random-nonce-12345"
+  "nonce": "random-nonce-12345",
+  "jti": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 }
 ```
 
@@ -87,7 +92,8 @@ JWTForge uses the standard OAuth2/OIDC `response_type` parameter to specify whic
   "sub": "user123",
   "name": "John Doe",
   "email": "john@example.com",
-  "nonce": "random-nonce-67890"
+  "nonce": "random-nonce-67890",
+  "jti": "9f8e7d6c-5b4a-3210-fedc-ba9876543210"
 }
 ```
 
@@ -208,6 +214,18 @@ The service supports all standard OIDC and OAuth2 claims. Currently JWTForge doe
 | `nonce` | Nonce value for ID tokens | - | `"random-nonce-12345"` |
 
 You can override any default claim or add custom claims by including them in your POST request.
+
+## OIDC Scopes and Automatic Claim Population
+
+JWTForge automatically populates claims based on the `scope` parameter in your request, following the OIDC specification. This feature uses **faker.js** to generate realistic test data.
+
+| Scope | Claims Included | Example Data |
+|-------|----------------|--------------|
+| `openid` | `sub`, `iss`, `aud`, `exp`, `iat`, `nbf`, `jti` | Base claims (always included) |
+| `profile` | `name`, `given_name`, `family_name`, `middle_name`, `nickname`, `preferred_username`, `profile`, `picture`, `website`, `gender`, `birthdate`, `zoneinfo`, `locale`, `updated_at` | `Jane Smith`, `jane.smith`, `https://example.com/avatar.jpg` |
+| `email` | `email`, `email_verified` | `jane.smith@example.com`, `true` |
+| `address` | `address` (object with street_address, locality, region, postal_code, country) | `{"street_address": "123 Main St", "locality": "Anytown", "region": "CA", "postal_code": "12345", "country": "US"}` |
+| `phone` | `phone_number`, `phone_number_verified` | `+1-555-555-5555`, `true` |
 
 ## Usage Examples
 
@@ -398,11 +416,9 @@ JWTForge automatically selects the storage backend based on your configuration:
 
 ## Security Considerations
 
-**⚠️⚠️⚠️ IMPORTANT**: This service is designed for **testing and development purposes only**. 
+This service is designed for testing and development purposes only. For production use cases, use proper identity providers like Auth0, Okta, AWS Cognito, Azure AD, Keycloak, etc.
 
-**🚨🚨🚨🚨 DO NOT USE FOR PRODUCTION USE CASES**
-
-For production use cases, use proper identity providers like Auth0, Okta, AWS Cognito, Azure AD, Keycloak, etc.
+**🚨🚨 DO NOT USE FOR PRODUCTION USE CASES 🚨🚨**
 
 ## License
 
