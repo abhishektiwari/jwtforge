@@ -37,7 +37,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
     paths: {
       '/token': {
         post: {
-          tags: ['Token Endpoint'],
+          tags: ['Token-Endpoint'],
           summary: 'Generate JWT Token',
           description: 'Generate a signed JWT token with custom claims and optional key type selection (RSA or EC).',
           requestBody: {
@@ -368,7 +368,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
       },
       '/.well-known/jwks.json': {
         get: {
-          tags: ['OAuth2/OIDC Endpoints'],
+          tags: ['OAuth2-OIDC-Endpoints'],
           summary: 'Get JWKS',
           description: 'Retrieve JSON Web Key Set containing public keys for token verification. Returns both RSA and EC keys.',
           responses: {
@@ -433,7 +433,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
       },
       '/.well-known/openid-configuration': {
         get: {
-          tags: ['OAuth2/OIDC Endpoints'],
+          tags: ['OAuth2-OIDC-Endpoints'],
           summary: 'OpenID Connect Discovery',
           description: 'Retrieve OpenID Connect discovery document with supported endpoints, algorithms, and claims.',
           responses: {
