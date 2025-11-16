@@ -59,6 +59,32 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                       default: 'RSA',
                       description: 'Key type for signing (RSA=RS256, EC=ES256)'
                     },
+                    mode: {
+                      type: 'string',
+                      enum: ['fake', 'fuzz', 'malicious'],
+                      default: 'fake',
+                      description: 'Token generation mode: "fake" (realistic data with OIDC scopes), "fuzz" (random fuzzed values), "malicious" (security testing payloads)'
+                    },
+                    exclude: {
+                      type: 'array',
+                      items: {
+                        type: 'string'
+                      },
+                      description: 'List of claim names to exclude from fuzz/malicious transformations (e.g., ["exp", "nbf", "iat"] to create infinitely valid tokens). Always protected: iss, jti'
+                    },
+                    header_alg: {
+                      type: 'string',
+                      description: 'JWT header algorithm override. In fuzz mode, gets fuzzed to algorithm confusion attacks (none, None, HS256, etc.). Set to any value to enable header fuzzing in fuzz/malicious modes.'
+                    },
+                    header_kid: {
+                      type: 'string',
+                      description: 'JWT header key ID override. In fuzz/malicious modes, gets transformed to BLNS patterns or injection payloads. Set to any value to enable kid fuzzing.'
+                    },
+                    sig: {
+                      type: 'boolean',
+                      default: true,
+                      description: 'Include signature in JWT. Set to false to generate unsigned tokens (for CVE-2020-28042 testing). When false, token ends with "." instead of a signature.'
+                    },
                     iss: {
                       type: 'string',
                       description: 'Issuer'
@@ -197,6 +223,78 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                       email_verified: true,
                       picture: 'https://example.com/avatar.jpg',
                       locale: 'en-US'
+                    }
+                  },
+                  fuzz: {
+                    summary: 'Fuzz mode (random fuzzed values)',
+                    value: {
+                      mode: 'fuzz',
+                      sub: 'user123',
+                      name: 'Test User',
+                      email: 'test@example.com',
+                      roles: ['user']
+                    }
+                  },
+                  malicious: {
+                    summary: 'Malicious mode (security testing)',
+                    value: {
+                      mode: 'malicious',
+                      sub: 'user123',
+                      name: 'Test User',
+                      email: 'test@example.com',
+                      roles: ['user']
+                    }
+                  },
+                  fuzzWithExclusions: {
+                    summary: 'Fuzz mode with exclusions (infinitely valid token)',
+                    value: {
+                      mode: 'fuzz',
+                      sub: 'user123',
+                      name: 'Test User',
+                      email: 'test@example.com',
+                      roles: ['user'],
+                      exclude: ['exp', 'nbf', 'iat']
+                    }
+                  },
+                  algConfusion: {
+                    summary: 'Algorithm confusion attack (header fuzzing)',
+                    value: {
+                      mode: 'fuzz',
+                      sub: 'user123',
+                      name: 'Test User',
+                      header_alg: 'trigger-fuzz',
+                      header_kid: 'trigger-fuzz'
+                    }
+                  },
+                  cve20152951: {
+                    summary: 'alg=none signature bypass',
+                    value: {
+                      sub: 'user123',
+                      roles: ['admin'],
+                      header_alg: 'none'
+                    }
+                  },
+                  cve201610555: {
+                    summary: 'RS/HS256 key confusion',
+                    value: {
+                      sub: 'user123',
+                      roles: ['admin'],
+                      header_alg: 'HS256'
+                    }
+                  },
+                  cve20180114: {
+                    summary: 'Key injection (kid parameter)',
+                    value: {
+                      sub: 'user123',
+                      header_kid: '../../../../../../dev/null'
+                    }
+                  },
+                  cve202028042: {
+                    summary: 'Null signature',
+                    value: {
+                      sub: 'user123',
+                      roles: ['admin'],
+                      sig: false
                     }
                   }
                 }

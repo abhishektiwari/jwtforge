@@ -6,6 +6,7 @@
 import { KeyStore } from './durable.js';
 import { handleOpenAPIRequest, handleRootRequest } from './openapi.js';
 import { getKeyStorage } from './storage.js';
+import { applyModeTransformations, applyHeaderTransformations } from './modes.js';
 import { faker } from '@faker-js/faker';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
@@ -177,15 +178,19 @@ function getDefaultClaimsFromScope(scope) {
 
 /**
  * Create and sign JWT token
+ * @param {Object} claims - The claims for the JWT payload
+ * @param {Object} keyData - The key data for signing
+ * @param {Object} headerOverrides - Optional header field overrides (alg, kid)
+ * @param {boolean} skipSignature - If true, returns token without signature (for CVE-2020-28042 testing)
  */
-async function createJWT(claims, keyData) {
+async function createJWT(claims, keyData, headerOverrides = {}, skipSignature = false) {
   const now = Math.floor(Date.now() / 1000);
 
-  // JWT Header
+  // JWT Header with optional overrides
   const header = {
-    alg: keyData.alg,
+    alg: headerOverrides.alg !== undefined ? headerOverrides.alg : keyData.alg,
     typ: 'JWT',
-    kid: keyData.kid
+    kid: headerOverrides.kid !== undefined ? headerOverrides.kid : keyData.kid
   };
 
   // JWT Payload with default OIDC/OAuth2 claims
@@ -203,6 +208,9 @@ async function createJWT(claims, keyData) {
   // Remove metadata fields that shouldn't be in the token
   delete payload.kty;
   delete payload.alg;
+  delete payload.header_alg;
+  delete payload.header_kid;
+  delete payload.sig;
 
   // Encode header and payload
   const encodedHeader = base64urlEncode(
@@ -211,6 +219,13 @@ async function createJWT(claims, keyData) {
   const encodedPayload = base64urlEncode(
     new TextEncoder().encode(JSON.stringify(payload))
   );
+
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+
+  // If skipSignature is true, return unsigned JWT (for CVE-2020-28042 testing)
+  if (skipSignature) {
+    return `${signatureInput}.`;
+  }
 
   // Import private key for signing
   let privateKey = keyData.keyPair?.privateKey;
@@ -230,7 +245,6 @@ async function createJWT(claims, keyData) {
   }
 
   // Create signature based on algorithm
-  const signatureInput = `${encodedHeader}.${encodedPayload}`;
   let signatureBuffer;
 
   if (keyData.alg.startsWith('RS')) {
@@ -288,6 +302,16 @@ async function handleTokenRequest(request, env) {
     const kty = requestData.kty || 'RSA';
     const keyData = await getKeyData(env, kty);
 
+    // Extract mode from request, default to 'fake'
+    // Supported modes: 'fake' (default), 'fuzz', 'malicious'
+    const mode = requestData.mode || 'fake';
+
+    // Extract exclude list from request (claims to protect from fuzz/malicious modes)
+    const exclude = requestData.exclude || [];
+
+    // Extract sig parameter (defaults to true, when false generates unsigned tokens)
+    const skipSignature = requestData.sig === false;
+
     const response = {
       token_type: 'Bearer',
       expires_in: requestData.exp ? (requestData.exp - Math.floor(Date.now() / 1000)) : 3600,
@@ -295,35 +319,56 @@ async function handleTokenRequest(request, env) {
       key_id: keyData.kid
     };
 
-    // Get default claims based on requested scopes
-    const scopeDefaults = getDefaultClaimsFromScope(requestData.scope);
+    // Get default claims based on requested scopes (only for 'fake' mode)
+    const scopeDefaults = mode === 'fake' ? getDefaultClaimsFromScope(requestData.scope) : {};
+
+    // Apply header transformations (for alg and kid)
+    const headerOverrides = applyHeaderTransformations(requestData, mode, exclude);
 
     // Generate access token
     if (shouldGenerateAccessToken) {
-      const accessTokenClaims = {
+      let accessTokenClaims = {
         ...scopeDefaults,    // Default claims from scopes
         ...requestData,      // User-provided claims (override defaults)
         response_type: undefined, // Remove metadata
-        kty: undefined
+        kty: undefined,
+        mode: undefined,
+        exclude: undefined,
+        header_alg: undefined,
+        header_kid: undefined,
+        sig: undefined
       };
-      const accessToken = await createJWT(accessTokenClaims, keyData);
+
+      // Apply mode transformations (fuzz/malicious) with exclusions
+      accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
+
+      const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, skipSignature);
       response.access_token = accessToken;
     }
 
     // Generate ID token
     if (shouldGenerateIdToken) {
       // ID tokens have specific OIDC requirements
-      const idTokenClaims = {
+      let idTokenClaims = {
         ...scopeDefaults,    // Default claims from scopes
         ...requestData,      // User-provided claims (override defaults)
         response_type: undefined, // Remove metadata
         kty: undefined,
+        mode: undefined,
+        exclude: undefined,
+        header_alg: undefined,
+        header_kid: undefined,
+        sig: undefined,
         // ID tokens should have nonce if provided
         nonce: requestData.nonce,
         // Add at_hash for hybrid flows if access token is present
         ...(shouldGenerateAccessToken && response.access_token ? { at_hash: 'placeholder' } : {})
       };
-      const idToken = await createJWT(idTokenClaims, keyData);
+
+      // Apply mode transformations (fuzz/malicious) with exclusions
+      idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
+
+      const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, skipSignature);
       response.id_token = idToken;
     }
 

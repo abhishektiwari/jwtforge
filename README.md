@@ -1,6 +1,6 @@
 # JWTForge 
 
-A lightweight JWT token vending service for testing purposes, deployed on Cloudflare Workers. Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs. Use it for **fuzzing**, **end-to-end**, **penetration testing** of OIDC/OAuth2 application and services. Dig deeper by testing for unexpected values and claims to identify unexpected applications and service behaviours.
+A lightweight JWT token vending service for testing purposes, deployed on Cloudflare Workers. Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs. Use it for fuzzing, end-to-end, penetration testing of OIDC/OAuth2 application and services. Dig deeper by testing for unexpected values and claims to identify unexpected applications and service behaviours.
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)
 
@@ -11,21 +11,27 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 ![Workers KV](https://img.shields.io/badge/Storage-Workers%20KV%20(Default)-blue.svg)
 ![Durable Objects](https://img.shields.io/badge/Storage-Durable%20Objects%20(Optional)-green.svg)
 ![Faker.js](https://img.shields.io/badge/Test%20Data-Faker.js-yellow.svg)
+![BLNS](https://img.shields.io/badge/Fuzzing-BLNS-red.svg)
 
 ## Supports
 
-- OAuth2/OIDC Response Types: Standard `response_type` parameter (token, id_token, id_token token)
+- Testing Modes**: Three modes for different testing scenarios - applied to both header and payload.
+  - `fake` (default): Realistic test data using faker.js with OIDC scopes
+  - `fuzz`: Randomized fuzzing using `BLNS` (Big List of Naughty Strings) + edge cases
+  - `malicious`: Injection payloads (SQL, XSS, command injection, path traversal, etc.)
+- OAuth2/OIDC Response Types: Standard `response_type` parameter (`token`, `id_token`, `id_token token`)
 - OIDC Scope Support: Automatic claim population based on scopes (openid, profile, email, address, phone)
-- Realistic Test Data: Uses faker.js for generating authentic-looking user data
-- Multiple Key Types: Support for RSA (RS256) and EC (ES256) algorithms
-- Automatic Key Rotation: Keys rotate every 24 hours with 6-hour grace period (production)
+- Realistic Test Data: Uses `faker.js` for generating authentic-looking user data
+- Fuzzing Library: Uses `BLNS` (Big List of Naughty Strings) for comprehensive security testing
+- Multiple Key Types: Support for `RSA` (`RS256`) and `EC` (`ES256`) algorithms
+- Automatic Key Rotation: Keys rotate every 24-hours with 6-hour grace period (production)
 - JWT Token Generation: Create signed JWT tokens with configurable key types
-- OIDC/OAuth2 Claims Support: Standard claims (iss, sub, aud, exp, iat, etc.)
+- OIDC/OAuth2 Claims Support: Standard claims (`iss`, `sub`, `aud`, `exp`, `iat`, etc.)
 - Custom Claims: Add any non-standard claims to your tokens
 - JWKS Endpoint: Public key discovery at `/.well-known/jwks.json` with all active keys
 - OIDC Discovery: OpenID Connect discovery endpoint at `/.well-known/openid-configuration`
 - Flexible Storage: Workers KV (free, default) or Durable Objects (paid, strong consistency)
-- Lightweight: Uses Web Crypto API built into Cloudflare Workers + faker.js for test data
+- Lightweight: Uses Web Crypto API built into Cloudflare Workers
 - CORS Enabled: Works with frontend applications
 
 ## Key Types and Algorithms
@@ -46,7 +52,7 @@ To specify a key type, include the `kty` parameter in your token request:
 }
 ```
 
-If `kty` is not specified, RSA (RS256) is used by default.
+If `kty` is not specified, `RSA` (`RS256`) is used by default.
 
 ## Response Types (OAuth2/OIDC Standard)
 
@@ -61,7 +67,7 @@ JWTForge uses the standard OAuth2/OIDC `response_type` parameter to specify whic
 
 ### Response Type Examples
 
-**Access Token** (`response_type=token`):
+Access Token (`response_type=token`):
 ```json
 {
   "response_type": "token",
@@ -72,7 +78,7 @@ JWTForge uses the standard OAuth2/OIDC `response_type` parameter to specify whic
 }
 ```
 
-**ID Token** (`response_type=id_token`):
+ID Token (`response_type=id_token`):
 ```json
 {
   "response_type": "id_token",
@@ -85,7 +91,7 @@ JWTForge uses the standard OAuth2/OIDC `response_type` parameter to specify whic
 }
 ```
 
-**Both Tokens** (`response_type=id_token token`):
+Both Tokens (`response_type=id_token token`):
 ```json
 {
   "response_type": "id_token token",
@@ -109,16 +115,16 @@ Response when requesting both tokens:
 
 ## Interactive API Documentation
 
-Visit the root URL of your deployed service to access the **Swagger UI** interface:
+Visit the root URL of your deployed service to access the Swagger UI interface:
 - Local: `http://localhost:8787`
 - Production: `https://your-worker.workers.dev`
 
 ## Endpoints
 
-### POST /token
+### POST `/token`
 Generate a JWT token with custom claims and optional key type.
 
-**Request:**
+Request:
 ```bash
 curl -X POST https://your-worker.workers.dev/token \
   -H "Content-Type: application/json" \
@@ -131,7 +137,7 @@ curl -X POST https://your-worker.workers.dev/token \
   }'
 ```
 
-**Response:**
+Response:
 ```json
 {
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImRlZmF1bHQta2V5LTEifQ...",
@@ -140,15 +146,15 @@ curl -X POST https://your-worker.workers.dev/token \
 }
 ```
 
-### GET /.well-known/jwks.json
+### GET `/.well-known/jwks.json`
 Retrieve the JSON Web Key Set for token verification.
 
-**Request:**
+Request:
 ```bash
 curl https://your-worker.workers.dev/.well-known/jwks.json
 ```
 
-**Response:**
+Response:
 ```json
 {
   "keys": [
@@ -168,10 +174,10 @@ curl https://your-worker.workers.dev/.well-known/jwks.json
 }
 ```
 
-### GET /.well-known/openid-configuration
+### GET `/.well-known/openid-configuration`
 Retrieve the OpenID Connect discovery document.
 
-**Request:**
+Request:
 ```bash
 curl https://your-worker.workers.dev/.well-known/openid-configuration
 ```
@@ -217,7 +223,7 @@ You can override any default claim or add custom claims by including them in you
 
 ## OIDC Scopes and Automatic Claim Population
 
-JWTForge automatically populates claims based on the `scope` parameter in your request, following the OIDC specification. This feature uses **faker.js** to generate realistic test data.
+JWTForge automatically populates claims based on the `scope` parameter in your request, following the OIDC specification. This feature uses faker.js to generate realistic test data.
 
 | Scope | Claims Included | Example Data |
 |-------|----------------|--------------|
@@ -313,6 +319,188 @@ curl -X POST https://your-worker.workers.dev/token \
   }'
 ```
 
+## Security Testing Modes
+
+JWTForge supports three modes for different testing scenarios via the `mode` parameter:
+
+### Mode: `fake` (Default)
+Generates realistic test data using faker.js when OIDC scopes are specified.
+
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "fake",
+    "scope": "openid profile email",
+    "sub": "user123"
+  }'
+```
+
+Result: Claims like `name`, `email`, `given_name`, etc. are auto-populated with realistic faker.js data.
+
+### Mode: `fuzz`
+Randomly injects 1-3 fuzzed values from `BLNS` and additional edge cases.
+
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "fuzz",
+    "sub": "user123",
+    "name": "Test User",
+    "email": "test@example.com",
+    "roles": ["user"]
+  }'
+```
+
+Fuzz Patterns Include:
+- BLNS library (500+ strings): Unicode edge cases, emoji sequences, RTL text, ANSI escape codes, etc.
+- Non-string edge cases: `null`, `undefined`, `Infinity`, `NaN`, large arrays, nested objects
+- Numeric boundaries: `Number.MAX_SAFE_INTEGER`, `Number.MIN_SAFE_INTEGER`
+
+Example Output (random selection):
+```json
+{
+  "sub": "Penistone Community Church",  // Real place name that causes issues
+  "name": "But now...\u001b[20Cfor my greatest trick...\u001b[8m",  // ANSI escapes
+  "email": "test@example.com",
+  "roles": ["user"]
+}
+```
+
+### Mode: `malicious`
+Randomly injects 1-3 malicious payloads for security testing.
+
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "malicious",
+    "sub": "user123",
+    "name": "Test User",
+    "email": "test@example.com",
+    "roles": ["user"]
+  }'
+```
+
+Malicious Payloads Include:
+- SQL Injection: `' OR '1'='1`, `'; DROP TABLE users; --`, `' UNION SELECT NULL--`
+- XSS: `<script>alert('xss')</script>`, `<img src=x onerror=alert('xss')>`
+- Path Traversal: `../../../etc/passwd`, `....//....//....//etc/passwd`
+- Command Injection: `; ls -la`, `| cat /etc/passwd`, `` `whoami` ``
+- LDAP Injection: `*)(uid=*))(|(uid=*`
+- NoSQL Injection: `{'$gt':''}`, `{'$ne':null}`
+- Template Injection: `{{7*7}}`, `${7*7}`, `{{config.items()}}`
+- XML/XXE: XML entities and external entity attacks
+- Header Injection: CRLF injection attempts
+
+Example Output (random selection):
+```json
+{
+  "sub": "user123",
+  "name": "Test User",
+  "email": "' OR '1'='1",  // SQL injection in email
+  "roles": "*)(uid=*))(|(uid=*"  // LDAP injection in roles
+}
+```
+
+### Exclusion List
+
+Use the `exclude` parameter to protect specific claims from fuzz/malicious transformations:
+
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "fuzz",
+    "sub": "user123",
+    "name": "Test User",
+    "email": "test@example.com",
+    "exp": 9999999999,
+    "roles": ["user"],
+    "exclude": ["exp", "nbf", "iat"]
+  }'
+```
+
+Creates an infinitely valid token where `exp`, `nbf`, and `iat` remain unchanged, while other claims (like `name`, `email`, `roles`, `sub`) may be fuzzed.
+
+Common Use Cases:
+- `exclude: ["exp", "nbf", "iat"]` - Create tokens that remain valid indefinitely for long-running tests
+- `exclude: ["sub", "aud"]` - Protect subject and audience while fuzzing other claims
+- `exclude: ["roles", "permissions"]` - Test authorization logic without fuzzing permissions
+
+**Important Notes**:
+- Always protected (cannot be fuzzed): `iss`, `jti` (required for valid JWT structure)
+- By default, ALL claims except `iss` and `jti` can be fuzzed in `fuzz`/`malicious` modes, including `exp`, `nbf`, `iat`
+- Use the `exclude` parameter to protect specific claims like `exp`, `nbf`, `iat` for infinitely valid tokens
+- Metadata fields (`kty`, `response_type`, `mode`, `exclude`) are automatically excluded from transformations
+- Transformations apply to both access tokens and ID tokens when using hybrid flows
+
+### JWT Header Fuzzing
+
+Test JWT header vulnerabilities by fuzzing the `alg` and `kid` fields:
+
+Algorithm Confusion Attacks (manual override):
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sub": "user123",
+    "header_alg": "none"
+  }'
+```
+
+**Result**: Creates a token with `"alg": "none"` in the header, testing for algorithm confusion vulnerabilities.
+
+Automated Header Fuzzing (fuzz mode):
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "fuzz",
+    "sub": "user123",
+    "header_alg": "trigger-fuzz",
+    "header_kid": "trigger-fuzz"
+  }'
+```
+
+Fuzzed `alg` Values (in fuzz mode):
+- Algorithm confusion: `none`, `None`, `NONE`, `nOnE`
+- Symmetric key confusion: `HS256`, `HS384`, `HS512`
+- Different algorithms: `RS384`, `RS512`, `ES384`, `ES512`, `PS256`
+- Edge cases: empty string, BLNS patterns
+
+Fuzzed `kid` Values (in fuzz/malicious modes):
+- SQL injection: `' OR '1'='1`
+- Path traversal: `../../../etc/passwd`
+- XSS: `<script>alert('xss')</script>`
+- BLNS patterns: Unicode, null bytes, control characters
+
+Example Output:
+```json
+Header: {"alg": "none", "typ": "JWT", "kid": "<img src=x onerror=alert('xss')>"}
+```
+
+**Protect Header Fields**:
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "fuzz",
+    "sub": "user123",
+    "header_alg": "RS256",
+    "exclude": ["header_alg"]
+  }'
+```
+
+**Use Cases**:
+- Test algorithm validation (reject `none`, case-insensitive checks)
+- Test key confusion attacks (HS256 with RSA keys)
+- Test `kid` injection vulnerabilities (SQL, path traversal, XSS)
+- Test header parsing edge cases
+
+**Note**: `typ` field is not modifiable to maintain valid JWT structure.
+
 ## Key Storage and Rotation
 
 JWTForge uses different storage mechanisms depending on the environment:
@@ -323,7 +511,7 @@ For production (i.e. deployed as Cloudflare Workers): Keys are stored in Cloudfl
 
 ## Deployment
 
-JWTForge offers **two deployment options** to suit different needs:
+JWTForge offers two deployment options to suit different needs:
 
 ### 1. One-Click Deploy
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)
@@ -349,20 +537,20 @@ make help       # Show all commands
 
 ### Requirements
 
-- **Cloudflare Account** (Free tier works with Workers KV storage)
-- **Node.js 18+** (for manual deployment)
-- **Wrangler CLI** (installed automatically with `make install`)
+- Cloudflare Account (Free tier works with Workers KV storage)
+- Node.js 18+ (for manual deployment)
+- Wrangler CLI (installed automatically with `make install`)
 
 ### Switching to Durable Objects (Optional)
 
-By default, JWTForge uses **Workers KV** (free tier). To switch to **Durable Objects** for strong consistency:
+By default, JWTForge uses Workers KV (free tier). To switch to Durable Objects for strong consistency:
 
-**Requirements:**
+Requirements:
 - [Workers Paid Plan](https://workers.cloudflare.com/plans) ($5/month)
 
-**Setup Steps:**
+Setup Steps:
 
-1. **Enable Durable Objects in wrangler.toml:**
+1. Enable Durable Objects in wrangler.toml:
 ```toml
 [vars]
 USE_DURABLE_OBJECTS = "true"
@@ -382,7 +570,7 @@ new_classes = ["KeyStore"]
 # binding = "KEYSTORE_KV"
 ```
 
-2. **Deploy:**
+2. Deploy:
 ```bash
 make deploy
 ```
@@ -410,15 +598,15 @@ binding = "KEYSTORE_KV"
 
 JWTForge automatically selects the storage backend based on your configuration:
 
-- **Workers KV (Default)**: If `KEYSTORE_KV` binding exists
-- **Durable Objects**: If `USE_DURABLE_OBJECTS="true"` and `KEYSTORE_DURABLE` binding exists
-- **In-Memory**: Fallback for local development with `wrangler dev`
+- Workers KV (Default): If `KEYSTORE_KV` binding exists
+- Durable Objects: If `USE_DURABLE_OBJECTS="true"` and `KEYSTORE_DURABLE` binding exists
+- In-Memory: Fallback for local development with `wrangler dev`
 
 ## Security Considerations
 
 This service is designed for testing and development purposes only. For production use cases, use proper identity providers like Auth0, Okta, AWS Cognito, Azure AD, Keycloak, etc.
 
-**🚨🚨 DO NOT USE FOR PRODUCTION USE CASES 🚨🚨**
+🚨🚨 DO NOT USE FOR PRODUCTION USE CASES 🚨🚨
 
 ## License
 
