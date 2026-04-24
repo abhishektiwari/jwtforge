@@ -1,6 +1,6 @@
 # JWTForge Test Suite
 
- test collection for JWTForge JWT token service using Postman.
+Test collection for JWTForge JWT token service using Postman.
 
 ## Overview
 
