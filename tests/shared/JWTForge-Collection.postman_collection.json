@@ -1,0 +1,1010 @@
+{
+  "info": {
+    "name": "JWTForge API Tests",
+    "description": " test collection for JWTForge JWT token service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "JWT Token Generation",
+      "item": [
+        {
+          "name": "Generate Token - Basic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sub\": \"user123\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a basic JWT token with custom claims",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Token - With Scope",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sub\": \"user456\",\n  \"name\": \"Jane Smith\",\n  \"scope\": \"openid profile email\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with OIDC scopes for automatic claim population",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Token - ID Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"response_type\": \"id_token\",\n  \"sub\": \"user789\",\n  \"name\": \"Alice Johnson\",\n  \"email\": \"alice@example.com\",\n  \"nonce\": \"random-nonce-12345\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate an ID token for user authentication",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Token - Custom Claims",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sub\": \"user999\",\n  \"name\": \"Bob Admin\",\n  \"roles\": [\"admin\", \"user\"],\n  \"tenant_id\": \"tenant-456\",\n  \"permissions\": [\"read\", \"write\", \"delete\"],\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with custom claims (roles, permissions, etc.)",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Introspect JWT Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic {{basic_auth}}"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "token",
+                  "value": "{{jwt_token}}",
+                  "description": "Replace with actual JWT token from previous request"
+                },
+                {
+                  "key": "token_type_hint",
+                  "value": "access_token"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/introspect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "introspect"
+              ]
+            },
+            "description": "Introspect and validate a JWT token using RFC 7662"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Client Credentials Grant",
+      "item": [
+        {
+          "name": "Generate Token - Basic (No Scope)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic {{basic_auth}}"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token using OAuth2 client_credentials grant (RFC 6749)",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"cc_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{cc_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"cc_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{cc_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Token - With Scope",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic {{basic_auth}}"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid profile email"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with OIDC scopes for automatic claim population",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"cc_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{cc_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"cc_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{cc_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate Token - With Custom Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic {{basic_auth}}"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "client_credentials"
+                },
+                {
+                  "key": "scope",
+                  "value": "openid"
+                },
+                {
+                  "key": "sub",
+                  "value": "service-user-456"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with custom subject for machine-to-machine flows",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"cc_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{cc_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"cc_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{cc_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Introspect Client Credentials Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic {{basic_auth}}"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "token",
+                  "value": "{{cc_token}}",
+                  "description": "Replace with actual token from previous client_credentials request"
+                },
+                {
+                  "key": "token_type_hint",
+                  "value": "access_token"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/introspect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "introspect"
+              ]
+            },
+            "description": "Validate and introspect a token generated via client_credentials grant"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Token Exchange (RFC 8693)",
+      "item": [
+        {
+          "name": "Exchange Token - Basic",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "urn:ietf:params:oauth:grant-type:token-exchange"
+                },
+                {
+                  "key": "subject_token",
+                  "value": "{{jwt_token}}",
+                  "description": "Replace with actual JWT token from JWT Token Generation"
+                },
+                {
+                  "key": "subject_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:jwt"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Exchange a JWT token for an access token (RFC 8693)",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exchange Token - With Resource",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "urn:ietf:params:oauth:grant-type:token-exchange"
+                },
+                {
+                  "key": "subject_token",
+                  "value": "{{jwt_token}}"
+                },
+                {
+                  "key": "subject_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:jwt"
+                },
+                {
+                  "key": "resource",
+                  "value": "https://api.example.com"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Exchange token and update the resource/audience",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exchange Token - With Claim Transformation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "urn:ietf:params:oauth:grant-type:token-exchange"
+                },
+                {
+                  "key": "subject_token",
+                  "value": "{{jwt_token}}"
+                },
+                {
+                  "key": "subject_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:id_token"
+                },
+                {
+                  "key": "resource",
+                  "value": "https://api.backend.example.com"
+                },
+                {
+                  "key": "add_claims",
+                  "value": "scope:read write,dept:engineering"
+                },
+                {
+                  "key": "remove_claims",
+                  "value": "email_verified,nbf"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Exchange ID token and add/remove claims for authorization",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Exchange Token - Multi-Hop",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "grant_type",
+                  "value": "urn:ietf:params:oauth:grant-type:token-exchange"
+                },
+                {
+                  "key": "subject_token",
+                  "value": "{{exchanged_token}}",
+                  "description": "Replace with token from previous exchange"
+                },
+                {
+                  "key": "subject_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:access_token"
+                },
+                {
+                  "key": "resource",
+                  "value": "https://api-v2.example.com"
+                },
+                {
+                  "key": "add_claims",
+                  "value": "version:2,api_key:abc123"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Multi-hop token exchange - exchange an already exchanged token",
+            "event": [
+              {
+                "listen": "test",
+                "script": {
+                  "exec": [
+                    "if (pm.response.code === 200) {",
+                    "    var jsonData = pm.response.json();",
+                    "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                    "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "    });",
+                    "}"
+                  ],
+                  "type": "text/javascript"
+                }
+              }
+            ]
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"exchanged_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Token saved to {{exchanged_token}}\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Introspect Exchanged Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic {{basic_auth}}"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "token",
+                  "value": "{{exchanged_token}}",
+                  "description": "Replace with actual token from token exchange request"
+                },
+                {
+                  "key": "token_type_hint",
+                  "value": "access_token"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/introspect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "introspect"
+              ]
+            },
+            "description": "Validate and introspect an exchanged token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Discovery & JWKS",
+      "item": [
+        {
+          "name": "Get OIDC Discovery Document",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/.well-known/openid-configuration",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ".well-known",
+                "openid-configuration"
+              ]
+            },
+            "description": "Retrieve OpenID Connect discovery document"
+          },
+          "response": []
+        },
+        {
+          "name": "Get JWKS",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/.well-known/jwks.json",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                ".well-known",
+                "jwks.json"
+              ]
+            },
+            "description": "Retrieve JSON Web Key Set for token verification"
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8787",
+      "type": "string"
+    },
+    {
+      "key": "client_id",
+      "value": "client_123",
+      "type": "string"
+    },
+    {
+      "key": "basic_auth",
+      "value": "Y2xpZW50XzEyMzpjbGllbnRfMTIz",
+      "description": "Base64 encoded: client_123:client_123"
+    },
+    {
+      "key": "jwt_token",
+      "value": "",
+      "description": "Store JWT token from generation request"
+    },
+    {
+      "key": "cc_token",
+      "value": "",
+      "description": "Store client_credentials token"
+    },
+    {
+      "key": "exchanged_token",
+      "value": "",
+      "description": "Store exchanged token for multi-hop testing"
+    }
+  ]
+}

@@ -31,7 +31,7 @@ function base64urlDecode(str) {
 
 /**
  * Validate Basic authorization header
- * Accepts any alphanumeric client_id up to 50 characters
+ * Accepts alphanumeric, underscores, and/or hyphens in client_id up to 50 characters
  */
 function validateBasicAuth(authHeader) {
   if (!authHeader || !authHeader.startsWith('Basic ')) {
@@ -42,8 +42,8 @@ function validateBasicAuth(authHeader) {
     const credentials = atob(authHeader.slice(6));
     const [clientId] = credentials.split(':');
 
-    // Client ID should be alphanumeric, up to 50 characters
-    return /^[a-zA-Z0-9]{1,50}$/.test(clientId);
+    // Client ID should be alphanumeric, underscores, and/or hyphens, up to 50 characters
+    return /^[a-zA-Z0-9_-]{1,50}$/.test(clientId);
   } catch (e) {
     return false;
   }

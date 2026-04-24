@@ -9,6 +9,7 @@ import { getKeyStorage } from './storage.js';
 import { applyModeTransformations, applyHeaderTransformations } from './modes.js';
 import { handleIntrospectionRequest } from './introspect.js';
 import { handleDiscoveryRequest } from './discovery.js';
+import { parseTokenExchangeRequest } from './tokenexchange.js';
 import { faker } from '@faker-js/faker';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
@@ -309,16 +310,56 @@ async function handleTokenRequest(request, env) {
       grantType = requestData.grant_type;
       clientId = requestData.client_id;
     } else if (contentType.includes('application/x-www-form-urlencoded')) {
-      // Approach 2: OAuth2 client_credentials grant
-      const formData = new URLSearchParams(await request.text());
+      // Approach 2: OAuth2 client_credentials grant or Token Exchange
+      // Clone request before reading body so it can be read again if needed
+      const clonedRequest = request.clone();
+      const formData = new URLSearchParams(await clonedRequest.text());
       grantType = formData.get('grant_type');
+
+      // Check if this is a token exchange request (RFC 8693)
+      if (grantType === 'urn:ietf:params:oauth:grant-type:token-exchange') {
+        try {
+          const exchangeResult = await parseTokenExchangeRequest(request);
+
+          if (exchangeResult.error) {
+            return exchangeResult.error;
+          }
+
+          // Get key data for token generation
+          const keyData = await getKeyData(env, 'RSA');
+
+          // Create access token with exchanged claims
+          const accessToken = await createJWT(exchangeResult.claims, keyData);
+
+          const response = {
+            access_token: accessToken,
+            token_type: 'Bearer',
+            expires_in: 3600,
+            issued_token_type: exchangeResult.requestedTokenType,
+            subject_token_type: exchangeResult.subjectTokenType
+          };
+
+          return new Response(JSON.stringify(response), {
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        } catch (error) {
+          return new Response(
+            JSON.stringify({
+              error: 'server_error',
+              error_description: error.message
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
 
       // Validate grant_type
       if (grantType && grantType !== 'client_credentials') {
         return new Response(
           JSON.stringify({
             error: 'unsupported_grant_type',
-            error_description: 'Only client_credentials grant type is supported'
+            error_description: 'Supported grant types: client_credentials, urn:ietf:params:oauth:grant-type:token-exchange'
           }),
           { status: 400, headers: { 'Content-Type': 'application/json' } }
         );

@@ -23,7 +23,7 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 - OAuth2 Client Credentials Grant: Machine-to-machine token generation with spec-compliant `client_credentials` grant type
 - OIDC Scope Support: Automatic claim population based on scopes (openid, profile, email, address, phone)
 - Realistic Test Data: Uses `faker.js` for generating authentic-looking user data
-- Fuzzing Library: Uses `BLNS` (Big List of Naughty Strings) for comprehensive security testing
+- Fuzzing Library: Uses `BLNS` (Big List of Naughty Strings) for  security testing
 - Multiple Key Types: Support for `RSA` (`RS256`) and `EC` (`ES256`) algorithms
 - Automatic Key Rotation: Keys rotate every 24-hours with 6-hour grace period (production)
 - JWT Token Generation: Create signed JWT tokens with configurable key types
@@ -32,6 +32,7 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 - JWKS Endpoint: Public key discovery at `/.well-known/jwks.json` with all active keys
 - OIDC Discovery: OpenID Connect discovery endpoint at `/.well-known/openid-configuration`
 - Token Introspection: RFC 7662 compliant token validation and introspection endpoint at `/introspect`
+- Token Exchange: RFC 8693 compliant token exchange for converting between token types (JWT, ID Token, Access Token)
 - Flexible Storage: Workers KV (free, default) or Durable Objects (paid, strong consistency)
 - Lightweight: Uses Web Crypto API built into Cloudflare Workers
 - CORS Enabled: Works with frontend applications
@@ -205,6 +206,42 @@ Request:
 curl https://your-worker.workers.dev/.well-known/openid-configuration
 ```
 
+### POST `/token` with Token Exchange (RFC 8693)
+Exchange one token format for another (JWT, ID Token, or Access Token). Supports claim transformation.
+
+**Parameters:**
+- `grant_type` (required): `urn:ietf:params:oauth:grant-type:token-exchange`
+- `subject_token` (required): The token being exchanged
+- `subject_token_type` (required): Type of token - `urn:ietf:params:oauth:token-type:jwt`, `urn:ietf:params:oauth:token-type:id_token`, or `urn:ietf:params:oauth:token-type:access_token`
+- `resource` (optional): Target resource for the new token (updates `aud` claim)
+- `audience` (optional): Target audience (overrides resource, updates `aud` claim)
+- `requested_token_type` (optional): Type of token to return (defaults to `access_token`)
+- `add_claims` (optional): Claims to add, format: `key1:value1,key2:value2`
+- `remove_claims` (optional): Claims to remove, format: `claim1,claim2,claim3`
+
+**Request:**
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=eyJhbGciOiJSUzI1NiIs..." \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
+  -d "resource=https://api.example.com" \
+  -d "add_claims=scope:read+write,dept:engineering" \
+  -d "remove_claims=nbf,exp"
+```
+
+**Response:**
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:jwt"
+}
+```
+
 ## OIDC/OAuth2 Claims
 
 The service supports all standard OIDC and OAuth2 claims, as well as any custom claims. Pass any claim as a JSON key-value pair in your request body (using the Direct JSON Payload approach) and it will be included in the generated token. Currently JWTForge does not verify or validate standard claims. This is intentional since it's a testing/development tool designed to generate tokens with any claims you need for testing purposes, even malformed ones.
@@ -342,6 +379,35 @@ curl -X POST https://your-worker.workers.dev/token \
     }
   }'
 ```
+
+### Token Exchange - Basic (RFC 8693)
+Exchange a JWT for an access token:
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=eyJhbGciOiJSUzI1NiIs..." \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:jwt"
+```
+
+### Token Exchange - With Claim Transformation
+Exchange ID token and add/remove claims:
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=eyJhbGciOiJSUzI1NiIs..." \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
+  -d "resource=https://api.example.com" \
+  -d "add_claims=scope:read+write,dept:engineering" \
+  -d "remove_claims=email_verified,nbf"
+```
+
+**Use Cases:**
+- Convert ID tokens to access tokens for API access
+- Change token audience/resource during token flow
+- Add/remove claims to customize token for downstream services
+- Test multi-hop token exchange scenarios
 
 ## Security Testing Modes
 
@@ -708,6 +774,114 @@ while true; do
 
   sleep 300  # Check every 5 minutes
 done
+```
+
+## Token Exchange (RFC 8693)
+
+JWTForge provides an RFC 8693 compliant token exchange endpoint for converting between different token types and transforming claims.
+
+### Overview
+
+Token exchange allows you to convert one token format into another (e.g., ID token to access token) while optionally modifying claims. Supports JWT, ID Token, and Access Token formats.
+
+**Supported Token Types:**
+- `urn:ietf:params:oauth:token-type:jwt` - Standard JWT
+- `urn:ietf:params:oauth:token-type:id_token` - OpenID Connect ID Token
+- `urn:ietf:params:oauth:token-type:access_token` - OAuth 2.0 Access Token
+
+### Request Parameters
+
+- `grant_type` (required): `urn:ietf:params:oauth:grant-type:token-exchange`
+- `subject_token` (required): The token being exchanged (JWT format)
+- `subject_token_type` (required): Type of the subject token (one of the supported types above)
+- `resource` (optional): Target resource audience (updates `aud` claim)
+- `audience` (optional): Target audience (overrides resource, updates `aud` claim)
+- `requested_token_type` (optional): Type of token to return (defaults to `urn:ietf:params:oauth:token-type:access_token`)
+- `add_claims` (optional): Claims to add, format: `key1:value1,key2:value2`
+- `remove_claims` (optional): Claims to remove, format: `claim1,claim2,claim3`
+
+### Basic Exchange
+
+Exchange a JWT for an access token without modifications:
+
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=eyJhbGciOiJSUzI1NiIs..." \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:jwt"
+```
+
+### With Claim Transformation
+
+Exchange ID token and modify claims:
+
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=eyJhbGciOiJSUzI1NiIs..." \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
+  -d "resource=https://api.example.com" \
+  -d "add_claims=scope:read+write,dept:engineering,level:senior" \
+  -d "remove_claims=email_verified,nbf,picture"
+```
+
+### Response
+
+```json
+{
+  "access_token": "eyJhbGciOiJSUzI1NiIs...",
+  "token_type": "Bearer",
+  "expires_in": 3600,
+  "issued_token_type": "urn:ietf:params:oauth:token-type:access_token",
+  "subject_token_type": "urn:ietf:params:oauth:token-type:id_token"
+}
+```
+
+### Use Cases
+
+**Service-to-Service Token Exchange:**
+```bash
+# Exchange user's ID token for service API access token
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=$ID_TOKEN" \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:id_token" \
+  -d "resource=https://api.backend.example.com" \
+  -d "add_claims=client_id:service-app,scope:api.write"
+```
+
+**Multi-Hop Token Exchange:**
+Testing token exchange through multiple services:
+```bash
+# Step 1: Get initial token
+TOKEN=$(curl -s -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{"sub": "user123", "name": "Alice"}' | jq -r .access_token)
+
+# Step 2: Exchange for different resource
+EXCHANGED=$(curl -s -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=$TOKEN" \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:jwt" \
+  -d "resource=https://api-v2.example.com" \
+  -d "add_claims=version:2,api_key:abc123" \
+  -d "remove_claims=email,phone" | jq -r .access_token)
+```
+
+**Claim Modification for Authorization:**
+```bash
+# Exchange and update roles for new service
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=urn:ietf:params:oauth:grant-type:token-exchange" \
+  -d "subject_token=$EXISTING_TOKEN" \
+  -d "subject_token_type=urn:ietf:params:oauth:token-type:access_token" \
+  -d "add_claims=roles:admin,permissions:read:write:delete" \
+  -d "remove_claims=roles"
 ```
 
 ## Key Storage and Rotation

@@ -39,7 +39,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
         post: {
           tags: ['Token-Endpoint'],
           summary: 'Generate JWT Token',
-          description: 'Generate a signed JWT token with two approaches: (1) Direct JSON payload with custom claims, or (2) OAuth2 client_credentials grant (form-encoded with Basic auth). Client ID is auto-generated if not provided. **Using Client Credentials from Swagger:** Click "Authorize" (top right), select basicAuth, enter the same value for both username and password (your client_id). Then select `application/x-www-form-urlencoded` content type and fill in the form fields.',
+          description: 'Generate a signed JWT token with three approaches: (1) Direct JSON payload with custom claims, (2) OAuth2 client_credentials grant (RFC 6749, form-encoded with Basic auth), or (3) Token exchange (RFC 8693, form-encoded). Client ID is auto-generated if not provided. **Using Client Credentials from Swagger:** Click "Authorize" (top right), select basicAuth, enter the same value for both username and password (your client_id). Then select `application/x-www-form-urlencoded` content type and fill in the form fields.',
           requestBody: {
             required: true,
             content: {
@@ -315,22 +315,52 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                   properties: {
                     grant_type: {
                       type: 'string',
-                      enum: ['client_credentials'],
-                      description: 'OAuth2 grant type (must be "client_credentials")'
+                      enum: ['client_credentials', 'urn:ietf:params:oauth:grant-type:token-exchange'],
+                      description: 'OAuth2 grant type: "client_credentials" (RFC 6749) or "urn:ietf:params:oauth:grant-type:token-exchange" (RFC 8693)'
                     },
                     scope: {
                       type: 'string',
-                      description: 'OAuth2 scopes (space-separated, e.g., "openid profile email")'
+                      description: 'OAuth2 scopes (space-separated, e.g., "openid profile email"). Used with client_credentials grant.'
                     },
                     sub: {
                       type: 'string',
-                      description: 'Subject (user identifier)'
+                      description: 'Subject (user identifier). Used with client_credentials grant.'
+                    },
+                    subject_token: {
+                      type: 'string',
+                      description: 'The token being exchanged. Required for token-exchange grant.'
+                    },
+                    subject_token_type: {
+                      type: 'string',
+                      enum: ['urn:ietf:params:oauth:token-type:jwt', 'urn:ietf:params:oauth:token-type:id_token', 'urn:ietf:params:oauth:token-type:access_token'],
+                      description: 'Type of the subject token. Required for token-exchange grant.'
+                    },
+                    resource: {
+                      type: 'string',
+                      description: 'Target resource for the exchanged token. Updates the "aud" claim. Optional for token-exchange.'
+                    },
+                    audience: {
+                      type: 'string',
+                      description: 'Target audience for the exchanged token. Overrides resource. Optional for token-exchange.'
+                    },
+                    requested_token_type: {
+                      type: 'string',
+                      enum: ['urn:ietf:params:oauth:token-type:access_token', 'urn:ietf:params:oauth:token-type:jwt', 'urn:ietf:params:oauth:token-type:id_token'],
+                      description: 'Type of token to return. Defaults to access_token. Optional for token-exchange.'
+                    },
+                    add_claims: {
+                      type: 'string',
+                      description: 'Claims to add to the exchanged token. Format: key1:value1,key2:value2. Optional for token-exchange.'
+                    },
+                    remove_claims: {
+                      type: 'string',
+                      description: 'Claims to remove from the exchanged token. Format: claim1,claim2,claim3. Optional for token-exchange.'
                     }
                   }
                 },
                 examples: {
                   clientCredentials: {
-                    summary: 'OAuth2 client_credentials grant',
+                    summary: 'OAuth2 client_credentials grant (RFC 6749)',
                     value: {
                       grant_type: 'client_credentials',
                       scope: 'openid profile email'
@@ -342,6 +372,25 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                       grant_type: 'client_credentials',
                       scope: 'openid',
                       sub: 'test-user-123'
+                    }
+                  },
+                  tokenExchange: {
+                    summary: 'Token exchange (RFC 8693) - basic',
+                    value: {
+                      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+                      subject_token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InJzYS1rZXktMSJ9...',
+                      subject_token_type: 'urn:ietf:params:oauth:token-type:jwt'
+                    }
+                  },
+                  tokenExchangeWithTransform: {
+                    summary: 'Token exchange (RFC 8693) - with claim transformation',
+                    value: {
+                      grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+                      subject_token: 'eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6InJzYS1rZXktMSJ9...',
+                      subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
+                      resource: 'https://api.example.com',
+                      add_claims: 'scope:read write,dept:engineering',
+                      remove_claims: 'email_verified,nbf'
                     }
                   }
                 }
@@ -391,6 +440,16 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                         type: 'string',
                         example: 'rsa-key-1',
                         description: 'Key ID (kid) used for signing'
+                      },
+                      issued_token_type: {
+                        type: 'string',
+                        example: 'urn:ietf:params:oauth:token-type:access_token',
+                        description: 'Type of token returned (RFC 8693). Present in token exchange responses.'
+                      },
+                      subject_token_type: {
+                        type: 'string',
+                        example: 'urn:ietf:params:oauth:token-type:jwt',
+                        description: 'Type of subject token that was exchanged (RFC 8693). Present in token exchange responses.'
                       }
                     }
                   }
