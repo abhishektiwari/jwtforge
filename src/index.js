@@ -7,6 +7,8 @@ import { KeyStore } from './durable.js';
 import { handleOpenAPIRequest, handleRootRequest } from './openapi.js';
 import { getKeyStorage } from './storage.js';
 import { applyModeTransformations, applyHeaderTransformations } from './modes.js';
+import { handleIntrospectionRequest } from './introspect.js';
+import { handleDiscoveryRequest } from './discovery.js';
 import { faker } from '@faker-js/faker';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
@@ -271,7 +273,17 @@ async function createJWT(claims, keyData, headerOverrides = {}, skipSignature = 
 }
 
 /**
+ * Generate random client ID for backward compatibility
+ */
+function generateRandomClientId() {
+  return `client_${crypto.randomUUID().substring(0, 8)}`;
+}
+
+/**
  * Handle token generation endpoint
+ * Supports two approaches for backward compatibility:
+ * 1. Direct JSON payload (legacy)
+ * 2. OAuth2 client_credentials grant (form-encoded with Basic auth)
  */
 async function handleTokenRequest(request, env) {
   if (request.method !== 'POST') {
@@ -285,7 +297,107 @@ async function handleTokenRequest(request, env) {
   }
 
   try {
-    const requestData = await request.json();
+    const contentType = request.headers.get('Content-Type') || '';
+    let requestData = {};
+    let grantType = null;
+    let clientId = null;
+
+    // Parse request based on content type
+    if (contentType.includes('application/json')) {
+      // Approach 1: Direct JSON payload (legacy)
+      requestData = await request.json();
+      grantType = requestData.grant_type;
+      clientId = requestData.client_id;
+    } else if (contentType.includes('application/x-www-form-urlencoded')) {
+      // Approach 2: OAuth2 client_credentials grant
+      const formData = new URLSearchParams(await request.text());
+      grantType = formData.get('grant_type');
+
+      // Validate grant_type
+      if (grantType && grantType !== 'client_credentials') {
+        return new Response(
+          JSON.stringify({
+            error: 'unsupported_grant_type',
+            error_description: 'Only client_credentials grant type is supported'
+          }),
+          { status: 400, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (grantType === 'client_credentials') {
+        // Extract client_id from Basic auth
+        const authHeader = request.headers.get('Authorization');
+        if (!authHeader || !authHeader.startsWith('Basic ')) {
+          return new Response(
+            JSON.stringify({
+              error: 'invalid_client',
+              error_description: 'Basic authorization required for client_credentials grant'
+            }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+
+        try {
+          const credentials = atob(authHeader.slice(6));
+          const [extractedClientId, password] = credentials.split(':');
+
+          // Validate password equals client_id
+          if (password !== extractedClientId) {
+            return new Response(
+              JSON.stringify({
+                error: 'invalid_client',
+                error_description: 'Invalid client credentials'
+              }),
+              { status: 401, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
+
+          clientId = extractedClientId;
+        } catch (e) {
+          return new Response(
+            JSON.stringify({
+              error: 'invalid_client',
+              error_description: 'Invalid authorization header'
+            }),
+            { status: 401, headers: { 'Content-Type': 'application/json' } }
+          );
+        }
+      }
+
+      // Parse optional form fields for OAuth2 flow
+      if (formData.get('scope')) requestData.scope = formData.get('scope');
+      if (formData.get('sub')) requestData.sub = formData.get('sub');
+    } else if (contentType === '') {
+      // Empty content-type, try JSON
+      requestData = await request.json().catch(() => ({}));
+      grantType = requestData.grant_type;
+      clientId = requestData.client_id;
+    } else {
+      return new Response(
+        JSON.stringify({
+          error: 'invalid_request',
+          error_description: 'Content-Type must be application/json or application/x-www-form-urlencoded'
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Validate grant_type if provided in JSON
+    if (grantType && grantType !== 'client_credentials') {
+      return new Response(
+        JSON.stringify({
+          error: 'unsupported_grant_type',
+          error_description: 'Only client_credentials grant type is supported'
+        }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Generate or use provided client_id
+    if (!clientId) {
+      clientId = requestData.client_id || generateRandomClientId();
+    }
+    requestData.client_id = clientId;
 
     // Extract response_type from request (OAuth2/OIDC standard)
     // Supported values: "token", "id_token", "id_token token", "token id_token"
@@ -440,41 +552,6 @@ async function handleJWKSRequest(env) {
 }
 
 /**
- * Handle OIDC Discovery endpoint
- */
-async function handleDiscoveryRequest(request) {
-  const url = new URL(request.url);
-  const issuer = `${url.protocol}//${url.host}`;
-
-  const discoveryDocument = {
-    issuer: issuer,
-    token_endpoint: `${issuer}/token`,
-    jwks_uri: `${issuer}/.well-known/jwks.json`,
-    response_types_supported: ['token', 'id_token', 'id_token token', 'token id_token'],
-    subject_types_supported: ['public'],
-    id_token_signing_alg_values_supported: ['RS256', 'ES256'],
-    scopes_supported: ['openid', 'profile', 'email', 'address', 'phone'],
-    claims_supported: [
-      'sub', 'iss', 'aud', 'exp', 'iat', 'nbf', 'jti',
-      'name', 'given_name', 'family_name', 'middle_name', 'nickname',
-      'preferred_username', 'profile', 'picture', 'website',
-      'email', 'email_verified',
-      'gender', 'birthdate', 'zoneinfo', 'locale',
-      'phone_number', 'phone_number_verified',
-      'address', 'updated_at',
-      'scope', 'roles', 'groups', 'nonce'
-    ]
-  };
-
-  return new Response(JSON.stringify(discoveryDocument, null, 2), {
-    status: 200,
-    headers: {
-      'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
-    }
-  });
-}
-/**
  * Main request handler
  */
 export default {
@@ -488,7 +565,7 @@ export default {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         }
       });
     }
@@ -496,6 +573,8 @@ export default {
     // Route handling
     if (path === '/token') {
       return handleTokenRequest(request, env);
+    } else if (path === '/introspect') {
+      return handleIntrospectionRequest(request, env);
     } else if (path === '/.well-known/jwks.json') {
       return handleJWKSRequest(env);
     } else if (path === '/.well-known/openid-configuration') {

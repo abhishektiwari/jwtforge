@@ -15,11 +15,12 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 
 ## Supports
 
-- Testing Modes**: Three modes for different testing scenarios - applied to both header and payload.
+- Testing Modes: Three modes for different testing scenarios - applied to both header and payload.
   - `fake` (default): Realistic test data using faker.js with OIDC scopes
   - `fuzz`: Randomized fuzzing using `BLNS` (Big List of Naughty Strings) + edge cases
   - `malicious`: Injection payloads (SQL, XSS, command injection, path traversal, etc.)
 - OAuth2/OIDC Response Types: Standard `response_type` parameter (`token`, `id_token`, `id_token token`)
+- OAuth2 Client Credentials Grant: Machine-to-machine token generation with spec-compliant `client_credentials` grant type
 - OIDC Scope Support: Automatic claim population based on scopes (openid, profile, email, address, phone)
 - Realistic Test Data: Uses `faker.js` for generating authentic-looking user data
 - Fuzzing Library: Uses `BLNS` (Big List of Naughty Strings) for comprehensive security testing
@@ -30,6 +31,7 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 - Custom Claims: Add any non-standard claims to your tokens
 - JWKS Endpoint: Public key discovery at `/.well-known/jwks.json` with all active keys
 - OIDC Discovery: OpenID Connect discovery endpoint at `/.well-known/openid-configuration`
+- Token Introspection: RFC 7662 compliant token validation and introspection endpoint at `/introspect`
 - Flexible Storage: Workers KV (free, default) or Durable Objects (paid, strong consistency)
 - Lightweight: Uses Web Crypto API built into Cloudflare Workers
 - CORS Enabled: Works with frontend applications
@@ -122,7 +124,7 @@ Visit the root URL of your deployed service to access the Swagger UI interface:
 ## Endpoints
 
 ### POST `/token`
-Generate a JWT token with custom claims and optional key type.
+Generate a JWT token using JWTForge's custom implementation. Accepts a JSON body with key-value pairs representing any claims you want to include in the JWT token. For spec-compliant OAuth2 token generation, see the [OAuth2 Client Credentials Grant](#oauth2-client-credentials-grant) section.
 
 Request:
 ```bash
@@ -143,6 +145,27 @@ Response:
   "access_token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCIsImtpZCI6ImRlZmF1bHQta2V5LTEifQ...",
   "token_type": "Bearer",
   "expires_in": 3600
+}
+```
+
+### POST `/introspect`
+Validate a token and retrieve its claims (RFC 7662 compliant). Requires Basic authentication. See the [Token Introspection Endpoint](#token-introspection-endpoint) section for detailed documentation.
+
+Request:
+```bash
+curl -X POST https://your-worker.workers.dev/introspect \
+  -H "Authorization: Basic base64(client_id:client_id)" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=eyJhbGciOiJSUzI1NiIs..."
+```
+
+Response (Active Token):
+```json
+{
+  "active": true,
+  "sub": "user123",
+  "exp": 1735689600,
+  "iat": 1735686000
 }
 ```
 
@@ -182,19 +205,20 @@ Request:
 curl https://your-worker.workers.dev/.well-known/openid-configuration
 ```
 
-## Standard OIDC/OAuth2 Claims
+## OIDC/OAuth2 Claims
 
-The service supports all standard OIDC and OAuth2 claims. Currently JWTForge does not verify or validate standard claims. This is intentional since it's a testing/development tool designed to generate tokens with any claims you need for testing purposes, even malformed ones.
+The service supports all standard OIDC and OAuth2 claims, as well as any custom claims. Pass any claim as a JSON key-value pair in your request body (using the Direct JSON Payload approach) and it will be included in the generated token. Currently JWTForge does not verify or validate standard claims. This is intentional since it's a testing/development tool designed to generate tokens with any claims you need for testing purposes, even malformed ones.
 
 | Claim | Description | Default | Example |
 |-------|-------------|---------|---------|
 | `iss` | Issuer | Your worker URL | `"https://jwtforge.workers.dev"` |
 | `sub` | Subject (user identifier) | `"user123"` | `"user123"`, `"auth0\|507f1f77bcf86cd799439011"` |
-| `aud` | Audience | `"https://api.example.com"` | `"https://api.example.com"`, `"my-client-id"` |
+| `aud` | Audience | `"https://api.example.com"` | `"https://api.example.com"`, `"my-resource-id"` |
 | `exp` | Expiration time | Current time + 1 hour | `1735689600` |
 | `nbf` | Not before | Current time | `1735686000` |
 | `iat` | Issued at | Current time | `1735686000` |
 | `jti` | JWT ID | Random UUID | `"550e8400-e29b-41d4-a716-446655440000"` |
+| `client_id` | OAuth2 client identifier | Auto-generated or user-provided | `"test_app"`, `"client_a1b2c3d4"` |
 | `name` | Full name | - | `"John Doe"` |
 | `given_name` | First name | - | `"John"` |
 | `family_name` | Last name | - | `"Doe"` |
@@ -500,6 +524,191 @@ curl -X POST https://your-worker.workers.dev/token \
 - Test header parsing edge cases
 
 **Note**: `typ` field is not modifiable to maintain valid JWT structure.
+
+## OAuth2 Client Credentials Grant
+
+JWTForge supports the OAuth2 `client_credentials` grant for machine-to-machine token generation. This is ideal for automated testing, CI/CD pipelines, and scripting scenarios  when you want to verify your application handles standard OAuth2 `client_credentials` grant correctly.
+
+### Two Approaches
+
+**Approach 1: Direct JSON Payload (Core)**
+The standard approach for generating tokens with full flexibility. Any arbitrary claims can be passed as JSON fields.
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sub": "user123",
+    "name": "John Doe",
+    "client_id": "my_test_app",
+    "roles": ["admin", "user"],
+    "custom_claim": "custom_value"
+  }'
+```
+
+**Approach 2: OAuth2 client_credentials Grant (RFC 6749)**
+Standard OAuth2 flow using form-encoded request with Basic authentication. The password in Basic auth must equal the client_id (username).
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Authorization: Basic base64(my_test_app:my_test_app)" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials&scope=openid+profile+email"
+```
+
+**Note**: Custom claims like `roles` or `custom_claim` CANNOT be passed via OAuth2 form-encoded approach. Use the Direct JSON Payload approach if you need to include arbitrary custom claims.
+
+### Client ID Management
+
+- **Auto-Generated**: If `client_id` is not provided, JWTForge generates a random one (e.g., `client_a1b2c3d4`)
+- **Custom Client ID**: Pass `client_id` parameter in JSON or via Basic auth username (for client_credentials)
+- **Basic Auth Password**: For client_credentials grant, the password must equal the client_id (username)
+- **In Token Payload**: The `client_id` is automatically included in all generated tokens
+
+### Examples
+
+**Auto-generate client_id:**
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{"sub": "user123"}'
+
+# Returns token with auto-generated client_id
+```
+
+**Explicit client_id in JSON:**
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{"sub": "user123", "client_id": "test_app"}'
+```
+
+**OAuth2 client_credentials with Basic auth:**
+```bash
+# Basic auth format: base64(client_id:password) where password = client_id
+# For client_id "test_app", password is also "test_app"
+# base64(test_app:test_app) = dGVzdF9hcHA6dGVzdF9hcHA=
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Authorization: Basic dGVzdF9hcHA6dGVzdF9hcHA=" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials&scope=openid"
+```
+
+## Token Introspection Endpoint
+
+JWTForge provides an RFC 7662 compliant token introspection endpoint for validating and retrieving information about tokens.
+
+### POST `/introspect`
+
+Validate a token and retrieve its claims.
+
+**Requirements:**
+- Basic authentication with `client_id:password` format (password must equal client_id)
+- Form-encoded request body
+- Content-Type: `application/x-www-form-urlencoded`
+
+**Parameters:**
+- `token` (required): The token string to introspect
+- `token_type_hint` (optional): Set to `access_token` for hint (currently only value supported)
+
+### Request
+
+```bash
+curl -X POST https://your-worker.workers.dev/introspect \
+  -H "Authorization: Basic base64(client_id:client_id)" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=eyJhbGciOiJSUzI1NiIs..." \
+  -d "token_type_hint=access_token"
+```
+
+### Response (Active Token)
+
+```json
+{
+  "active": true,
+  "scope": "openid profile email",
+  "client_id": "test_app",
+  "sub": "user123",
+  "iss": "https://jwtforge.dev",
+  "aud": "https://api.example.com",
+  "exp": 1735689600,
+  "iat": 1735686000,
+  "nbf": 1735686000,
+  "jti": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "John Doe",
+  "email": "john@example.com",
+  "email_verified": true
+}
+```
+
+### Response (Inactive Token)
+
+```json
+{
+  "active": false
+}
+```
+
+### Validation Logic
+
+The introspection endpoint validates:
+- **Token Format**: Valid JWT with 3 parts (header.payload.signature)
+- **Expiration**: Token not expired (`exp` > current time)
+- **Not Before**: Token activation time valid (`nbf` <= current time)
+- **Signature**: Valid signature using active keys from JWKS endpoint
+- **Authorization**: Valid Basic auth credentials (password == client_id)
+
+### Use Cases
+
+**Testing Token Validation:**
+```bash
+# Generate a token
+TOKEN=$(curl -s -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{"sub": "test_user"}' | jq -r .access_token)
+
+# Introspect it
+curl -X POST https://your-worker.workers.dev/introspect \
+  -H "Authorization: Basic dGVzdF9hcHA6dGVzdF9hcHA=" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=$TOKEN"
+```
+
+**Integration Testing:**
+```bash
+# Generate and immediately validate token in test script
+TOKEN=$(curl -s -X POST http://localhost:8787/token \
+  -H "Content-Type: application/json" \
+  -d '{"sub": "user123", "client_id": "test_app"}' | jq -r .access_token)
+
+INTROSPECTION=$(curl -s -X POST http://localhost:8787/introspect \
+  -H "Authorization: Basic dGVzdF9hcHA6dGVzdF9hcHA=" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "token=$TOKEN")
+
+# Assert token is active
+echo $INTROSPECTION | jq .active # Should output: true
+```
+
+**Automated Credential Rotation:**
+```bash
+#!/bin/bash
+# Periodically introspect current token and regenerate if invalid
+
+while true; do
+  RESULT=$(curl -s -X POST https://your-worker.workers.dev/introspect \
+    -H "Authorization: Basic dGVzdF9hcHA6dGVzdF9hcHA=" \
+    -H "Content-Type: application/x-www-form-urlencoded" \
+    -d "token=$CURRENT_TOKEN")
+
+  if [ "$(echo $RESULT | jq -r .active)" = "false" ]; then
+    # Token expired, generate new one
+    CURRENT_TOKEN=$(curl -s -X POST https://your-worker.workers.dev/token \
+      -H "Content-Type: application/json" \
+      -d '{"client_id": "test_app"}' | jq -r .access_token)
+  fi
+
+  sleep 300  # Check every 5 minutes
+done
+```
 
 ## Key Storage and Rotation
 

@@ -39,7 +39,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
         post: {
           tags: ['Token-Endpoint'],
           summary: 'Generate JWT Token',
-          description: 'Generate a signed JWT token with custom claims and optional key type selection (RSA or EC).',
+          description: 'Generate a signed JWT token with two approaches: (1) Direct JSON payload with custom claims, or (2) OAuth2 client_credentials grant (form-encoded with Basic auth). Client ID is auto-generated if not provided. **Using Client Credentials from Swagger:** Click "Authorize" (top right), select basicAuth, enter the same value for both username and password (your client_id). Then select `application/x-www-form-urlencoded` content type and fill in the form fields.',
           requestBody: {
             required: true,
             content: {
@@ -155,6 +155,15 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     nonce: {
                       type: 'string',
                       description: 'Nonce value for ID tokens (prevents replay attacks)'
+                    },
+                    client_id: {
+                      type: 'string',
+                      description: 'Client identifier. If not provided, a random client_id will be auto-generated (e.g., client_a1b2c3d4)'
+                    },
+                    grant_type: {
+                      type: 'string',
+                      enum: ['client_credentials'],
+                      description: 'OAuth2 grant type. For form-encoded requests using client_credentials, use Basic auth with Authorization header.'
                     }
                   },
                   additionalProperties: true
@@ -298,9 +307,52 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     }
                   }
                 }
+              },
+              'application/x-www-form-urlencoded': {
+                schema: {
+                  type: 'object',
+                  required: ['grant_type'],
+                  properties: {
+                    grant_type: {
+                      type: 'string',
+                      enum: ['client_credentials'],
+                      description: 'OAuth2 grant type (must be "client_credentials")'
+                    },
+                    scope: {
+                      type: 'string',
+                      description: 'OAuth2 scopes (space-separated, e.g., "openid profile email")'
+                    },
+                    sub: {
+                      type: 'string',
+                      description: 'Subject (user identifier)'
+                    }
+                  }
+                },
+                examples: {
+                  clientCredentials: {
+                    summary: 'OAuth2 client_credentials grant',
+                    value: {
+                      grant_type: 'client_credentials',
+                      scope: 'openid profile email'
+                    }
+                  },
+                  clientCredentialsWithSub: {
+                    summary: 'Client credentials with custom subject',
+                    value: {
+                      grant_type: 'client_credentials',
+                      scope: 'openid',
+                      sub: 'test-user-123'
+                    }
+                  }
+                }
               }
             }
           },
+          security: [
+            {
+              basicAuth: []
+            }
+          ],
           responses: {
             '200': {
               description: 'Token generated successfully',
@@ -357,6 +409,155 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                       },
                       message: {
                         type: 'string'
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/introspect': {
+        post: {
+          tags: ['OAuth2-OIDC-Endpoints'],
+          summary: 'Introspect Token',
+          description: 'Validate and retrieve information about a token (RFC 7662). Requires Basic authentication with any alphanumeric client_id (up to 50 characters). Returns token claims if valid, or {"active": false} if invalid.',
+          security: [
+            {
+              basicAuth: []
+            }
+          ],
+          requestBody: {
+            required: true,
+            content: {
+              'application/x-www-form-urlencoded': {
+                schema: {
+                  type: 'object',
+                  required: ['token'],
+                  properties: {
+                    token: {
+                      type: 'string',
+                      description: 'The token string to introspect'
+                    },
+                    token_type_hint: {
+                      type: 'string',
+                      enum: ['access_token'],
+                      description: 'Optional hint about token type. Currently only "access_token" is supported.'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '200': {
+              description: 'Token introspection response (RFC 7662)',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      active: {
+                        type: 'boolean',
+                        description: 'Whether the token is currently valid'
+                      },
+                      scope: {
+                        type: 'string',
+                        description: 'Space-separated list of scopes'
+                      },
+                      client_id: {
+                        type: 'string',
+                        description: 'Client identifier'
+                      },
+                      username: {
+                        type: 'string',
+                        description: 'Username'
+                      },
+                      token_type: {
+                        type: 'string',
+                        description: 'Token type (e.g., "Bearer")'
+                      },
+                      exp: {
+                        type: 'integer',
+                        description: 'Token expiration time (Unix timestamp)'
+                      },
+                      iat: {
+                        type: 'integer',
+                        description: 'Issued at time (Unix timestamp)'
+                      },
+                      nbf: {
+                        type: 'integer',
+                        description: 'Not before time (Unix timestamp)'
+                      },
+                      sub: {
+                        type: 'string',
+                        description: 'Subject (user identifier)'
+                      },
+                      iss: {
+                        type: 'string',
+                        description: 'Issuer'
+                      },
+                      aud: {
+                        type: 'string',
+                        description: 'Audience'
+                      },
+                      jti: {
+                        type: 'string',
+                        description: 'JWT ID (unique token identifier)'
+                      }
+                    },
+                    example: {
+                      active: true,
+                      scope: 'openid profile email',
+                      sub: 'user123',
+                      iss: 'https://jwtforge.example.com',
+                      aud: 'https://api.example.com',
+                      exp: 1735689600,
+                      iat: 1735686000,
+                      nbf: 1735686000,
+                      jti: '550e8400-e29b-41d4-a716-446655440000',
+                      name: 'John Doe',
+                      email: 'john@example.com'
+                    }
+                  }
+                }
+              }
+            },
+            '401': {
+              description: 'Invalid or missing authorization',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      error: {
+                        type: 'string',
+                        example: 'invalid_client'
+                      },
+                      error_description: {
+                        type: 'string',
+                        example: 'Invalid authorization'
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            '400': {
+              description: 'Invalid request',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      error: {
+                        type: 'string',
+                        example: 'invalid_request'
+                      },
+                      error_description: {
+                        type: 'string',
+                        example: 'token parameter is required'
                       }
                     }
                   }
@@ -492,6 +693,15 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
               }
             }
           }
+        }
+      }
+    },
+    components: {
+      securitySchemes: {
+        basicAuth: {
+          type: 'http',
+          scheme: 'basic',
+          description: 'Basic authentication: Username is the client_id (alphanumeric, up to 50 characters). Password must equal the client_id. Format: base64(client_id:client_id)'
         }
       }
     }
