@@ -311,6 +311,10 @@ async function handleTokenRequest(request, env) {
     let grantType = null;
     let clientId = null;
 
+    // Extract issuer from request URL for token claims
+    const url = new URL(request.url);
+    const issuer = `${url.protocol}//${url.host}`;
+
     // Parse request based on content type
     if (contentType.includes('application/json')) {
       // Approach 1: Direct JSON payload (legacy)
@@ -335,6 +339,11 @@ async function handleTokenRequest(request, env) {
 
           // Get key data for token generation
           const keyData = await getKeyData(env, 'RSA');
+
+          // Ensure exchanged token has issuer set from request URL
+          if (!exchangeResult.claims.iss) {
+            exchangeResult.claims.iss = issuer;
+          }
 
           // Create access token with exchanged claims
           const accessToken = await createJWT(exchangeResult.claims, keyData);
@@ -458,6 +467,11 @@ async function handleTokenRequest(request, env) {
       clientId = requestData.client_id || generateRandomClientId();
     }
     requestData.client_id = clientId;
+
+    // Set issuer from request URL if not provided
+    if (!requestData.iss) {
+      requestData.iss = issuer;
+    }
 
     // Extract response_type from request (OAuth2/OIDC standard)
     // Supported values: "token", "id_token", "id_token token", "token id_token"
