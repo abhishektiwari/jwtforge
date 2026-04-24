@@ -291,7 +291,38 @@
             },
             "description": "Introspect and validate a JWT token using RFC 7662"
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function() {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has 'active' field\", function() {",
+                  "    pm.expect(jsonData).to.have.property('active');",
+                  "});",
+                  "",
+                  "if (jsonData.active) {",
+                  "    pm.test(\"Active token has claims\", function() {",
+                  "        pm.expect(jsonData).to.have.property('sub');",
+                  "        pm.expect(jsonData).to.have.property('exp');",
+                  "        pm.expect(jsonData).to.have.property('iat');",
+                  "    });",
+                  "} else {",
+                  "    pm.test(\"Inactive token returned\", function() {",
+                  "        pm.expect(jsonData.active).to.be.false;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
@@ -559,7 +590,38 @@
             },
             "description": "Validate and introspect a token generated via client_credentials grant"
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function() {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has 'active' field\", function() {",
+                  "    pm.expect(jsonData).to.have.property('active');",
+                  "});",
+                  "",
+                  "if (jsonData.active) {",
+                  "    pm.test(\"Active token has claims\", function() {",
+                  "        pm.expect(jsonData).to.have.property('sub');",
+                  "        pm.expect(jsonData).to.have.property('exp');",
+                  "        pm.expect(jsonData).to.have.property('iat');",
+                  "    });",
+                  "} else {",
+                  "    pm.test(\"Inactive token returned\", function() {",
+                  "        pm.expect(jsonData.active).to.be.false;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
@@ -927,7 +989,38 @@
             },
             "description": "Validate and introspect an exchanged token"
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function() {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"Response has 'active' field\", function() {",
+                  "    pm.expect(jsonData).to.have.property('active');",
+                  "});",
+                  "",
+                  "if (jsonData.active) {",
+                  "    pm.test(\"Active token has claims\", function() {",
+                  "        pm.expect(jsonData).to.have.property('sub');",
+                  "        pm.expect(jsonData).to.have.property('exp');",
+                  "        pm.expect(jsonData).to.have.property('iat');",
+                  "    });",
+                  "} else {",
+                  "    pm.test(\"Inactive token returned\", function() {",
+                  "        pm.expect(jsonData.active).to.be.false;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     },
@@ -951,7 +1044,24 @@
             },
             "description": "Retrieve OpenID Connect discovery document"
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function() {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is valid JSON\", function() {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         },
         {
           "name": "Get JWKS",
@@ -970,7 +1080,24 @@
             },
             "description": "Retrieve JSON Web Key Set for token verification"
           },
-          "response": []
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function() {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Response is valid JSON\", function() {",
+                  "    pm.response.to.be.json;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
         }
       ]
     }
