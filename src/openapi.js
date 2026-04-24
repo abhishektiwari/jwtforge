@@ -158,7 +158,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     },
                     client_id: {
                       type: 'string',
-                      description: 'Client identifier. If not provided, a random client_id will be auto-generated (e.g., client_a1b2c3d4)'
+                      description: 'Client identifier (alphanumeric, underscores, and/or hyphens, up to 50 characters). If not provided, a random client_id will be auto-generated (e.g., client_a1b2c3d4)'
                     },
                     grant_type: {
                       type: 'string',
@@ -481,7 +481,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
         post: {
           tags: ['OAuth2-OIDC-Endpoints'],
           summary: 'Introspect Token',
-          description: 'Validate and retrieve information about a token (RFC 7662). Requires Basic authentication with any alphanumeric client_id (up to 50 characters). Returns token claims if valid, or {"active": false} if invalid.',
+          description: 'Validate and retrieve information about a token (RFC 7662). Requires Basic authentication with client_id (alphanumeric, underscores, and/or hyphens, up to 50 characters). Returns token claims if valid, or {"active": false} if invalid.',
           security: [
             {
               basicAuth: []
@@ -760,7 +760,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
         basicAuth: {
           type: 'http',
           scheme: 'basic',
-          description: 'Basic authentication: Username is the client_id (alphanumeric, up to 50 characters). Password must equal the client_id. Format: base64(client_id:client_id)'
+          description: 'Basic authentication: Username is the client_id (alphanumeric, underscores, and/or hyphens, up to 50 characters). Password must equal the client_id. Format: base64(client_id:client_id)'
         }
       }
     }

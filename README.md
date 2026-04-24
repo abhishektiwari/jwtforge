@@ -255,7 +255,7 @@ The service supports all standard OIDC and OAuth2 claims, as well as any custom 
 | `nbf` | Not before | Current time | `1735686000` |
 | `iat` | Issued at | Current time | `1735686000` |
 | `jti` | JWT ID | Random UUID | `"550e8400-e29b-41d4-a716-446655440000"` |
-| `client_id` | OAuth2 client identifier | Auto-generated or user-provided | `"test_app"`, `"client_a1b2c3d4"` |
+| `client_id` | OAuth2 client identifier | Auto-generated or user-provided, Accepts alphanumeric, underscores, and/or hyphens, up to 50 characters | `"test_app"`, `"client_a1b2c3d4"` |
 | `name` | Full name | - | `"John Doe"` |
 | `given_name` | First name | - | `"John"` |
 | `family_name` | Last name | - | `"Doe"` |

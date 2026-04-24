@@ -274,6 +274,14 @@ async function createJWT(claims, keyData, headerOverrides = {}, skipSignature = 
 }
 
 /**
+ * Validate client_id format
+ * Accepts alphanumeric, underscores, and/or hyphens, up to 50 characters
+ */
+function validateClientIdFormat(clientId) {
+  return /^[a-zA-Z0-9_-]{1,50}$/.test(clientId);
+}
+
+/**
  * Generate random client ID for backward compatibility
  */
 function generateRandomClientId() {
@@ -388,6 +396,17 @@ async function handleTokenRequest(request, env) {
               JSON.stringify({
                 error: 'invalid_client',
                 error_description: 'Invalid client credentials'
+              }),
+              { status: 401, headers: { 'Content-Type': 'application/json' } }
+            );
+          }
+
+          // Validate client_id format
+          if (!validateClientIdFormat(extractedClientId)) {
+            return new Response(
+              JSON.stringify({
+                error: 'invalid_client',
+                error_description: 'Invalid client_id format. Must be alphanumeric, underscores, and/or hyphens, up to 50 characters'
               }),
               { status: 401, headers: { 'Content-Type': 'application/json' } }
             );
