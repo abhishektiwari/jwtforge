@@ -8,9 +8,13 @@
  * GET /.well-known/openid-configuration
  * Returns OpenID Connect configuration document with endpoint URLs and capabilities
  */
-export async function handleDiscoveryRequest(request) {
-  const url = new URL(request.url);
-  const issuer = `${url.protocol}//${url.host}`;
+export async function handleDiscoveryRequest(request, env) {
+  // Use ISSUER environment variable if available, otherwise derive from request URL
+  let issuer = env?.ISSUER;
+  if (!issuer) {
+    const url = new URL(request.url);
+    issuer = `${url.protocol}//${url.host}`;
+  }
 
   const discoveryDocument = {
     issuer: issuer,

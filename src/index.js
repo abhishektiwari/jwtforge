@@ -311,9 +311,12 @@ async function handleTokenRequest(request, env) {
     let grantType = null;
     let clientId = null;
 
-    // Extract issuer from request URL for token claims
-    const url = new URL(request.url);
-    const issuer = `${url.protocol}//${url.host}`;
+    // Extract issuer from environment or request URL for token claims
+    let issuer = env?.ISSUER;
+    if (!issuer) {
+      const url = new URL(request.url);
+      issuer = `${url.protocol}//${url.host}`;
+    }
 
     // Parse request based on content type
     if (contentType.includes('application/json')) {
@@ -652,7 +655,7 @@ export default {
     } else if (path === '/.well-known/jwks.json') {
       return handleJWKSRequest(env);
     } else if (path === '/.well-known/openid-configuration') {
-      return handleDiscoveryRequest(request);
+      return handleDiscoveryRequest(request, env);
     } else if (path === '/openapi.json' || path === '/swagger.json') {
       return handleOpenAPIRequest(request);
     } else if (path === '/') {
