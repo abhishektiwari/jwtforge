@@ -1,11 +1,12 @@
 {
   "name": "jwtforge",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "JWT token vending service for testing with JWKS and OIDC discovery endpoints",
   "main": "src/index.js",
   "bin": {
     "jwtforge": "./bin/jwtforge.js"
   },
+
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
@@ -28,10 +29,6 @@
   "bugs": {
     "url": "https://github.com/abhishektiwari/jwtforge/issues",
     "email": "abhishek@abhishek-tiwari.com"
-  },
-  "funding": {
-    "type": "github",
-    "url": "https://github.com/sponsors/abhishektiwari"
   },
   "dependencies": {
     "@faker-js/faker": "^9.2.0",
