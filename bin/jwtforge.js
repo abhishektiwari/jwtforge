@@ -293,9 +293,29 @@ async function main() {
   }
 
   if (command === 'start') {
-    console.log('Starting jwtforge development server...\n');
+    console.log('Starting jwtforge development server...');
     try {
-      await run('npm run dev');
+      // Run in background with nohup
+      const { spawn } = require('child_process');
+      const child = spawn('npm', ['run', 'cli'], {
+        detached: true,
+        stdio: 'ignore'
+      });
+      child.unref();
+
+      // Give it a moment to start
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Check if it started successfully
+      const status = await checkStatus();
+      if (status.running) {
+        console.log(`✓ jwtforge started on ${status.host}`);
+        console.log('Use "jwtforge token" to generate tokens');
+        console.log('Use "jwtforge stop" to stop the server');
+      } else {
+        console.log('⚠ Server may not have started. Check with: jwtforge status');
+      }
+      process.exit(0);
     } catch (error) {
       console.error('Error:', error.message);
       process.exit(1);
