@@ -1,12 +1,11 @@
 {
   "name": "jwtforge",
-  "version": "0.0.1",
+  "version": "0.0.2-beta.0",
   "description": "JWT token vending service for testing with JWKS and OIDC discovery endpoints",
   "main": "src/index.js",
   "bin": {
     "jwtforge": "./bin/jwtforge.js"
   },
-
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
