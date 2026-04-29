@@ -1,7 +1,6 @@
 name: Publish Package
 on:
-  release:
-    types: [published] # Trigger when a new GitHub release is created
+  workflow_dispatch:
 
 jobs:
   publish:
