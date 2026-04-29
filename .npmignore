@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+.github
+
+# Testing
+test/
+tests/
+__tests__
+*.test.js
+*.spec.js
+coverage/
+.nyc_output/
+
+# Development
+.env
+.env.*
+.claude/
+.wrangler/
+node_modules/
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Documentation
+*.md
+docs/
+wiki/
+CHANGELOG.md
+CONTRIBUTING.md
+
+# Build/Config
+wrangler.toml
+tsconfig.json
+webpack.config.js
+.eslintrc*
+.prettierrc*
+Makefile
+
+# Other
+paper/
+.postman/
+*.postman_collection.json
+.editorconfig
+.gitattributes

@@ -13,6 +13,18 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 ![Faker.js](https://img.shields.io/badge/Test%20Data-Faker.js-yellow.svg)
 ![BLNS](https://img.shields.io/badge/Fuzzing-BLNS-red.svg)
 
+
+**Quick Start with CLI** locally or as part of CI/CD pipeline
+
+```bash
+# Install globally
+npm install -g jwtforge
+# or locally in your project
+npm install jwtforge
+# Generate with default claims
+jwtforge token
+```
+
 ## Supports
 
 - Testing Modes: Three modes for different testing scenarios - applied to both header and payload.
@@ -892,16 +904,107 @@ For local development: keys are stored in memory and regenerated on restart.
 
 For production (i.e. deployed as Cloudflare Workers): Keys are stored in Cloudflare Durable Objects. Keys automatically rotate every 24 hours with old keys remain valid for 6 hours after rotation
 
-## Deployment
 
-JWTForge offers two deployment options to suit different needs:
+## Run Locally or in CI/CD Pipeline with CLI
 
-### 1. One-Click Deploy
+The easiest way to run JWTForge locally or in CI/CD Pipeline  is using the `jwtforge` CLI tool. Install it as an npm package and use commands to start the server and generate tokens.
+
+### Installation
+
+```bash
+npm install -g jwtforge
+# or locally in your project
+npm install jwtforge
+```
+
+### CLI Commands
+
+**Start the development server:**
+```bash
+jwtforge start
+```
+
+**Generate a JWT token:**
+```bash
+# Generate with default claims
+jwtforge token
+
+# Generate with custom payload
+jwtforge token '{"sub":"user123","scope":"profile email"}'
+
+# Generate with custom port (if running on different port)
+jwtforge token '{"sub":"alice"}' --port=9000
+
+# Using environment variable
+JWTFORGE_PORT=9000 jwtforge token '{"sub":"bob"}'
+```
+
+**Check server status:**
+```bash
+jwtforge status
+# Output: ✓ jwtforge is running on localhost:8787
+```
+
+**Stop the server:**
+```bash
+jwtforge stop
+# Output: ✓ Stopped jwtforge on port 8787
+```
+
+**Show help:**
+```bash
+jwtforge help
+```
+
+### CLI Port Options
+
+The CLI automatically detects the port where `jwtforge` is running. You can also specify it manually:
+
+1. **Command-line argument**: `jwtforge token --port=8787`
+2. **Environment variable**: `JWTFORGE_PORT=8787 jwtforge token`
+3. **Default**: Falls back to 8787
+
+### Example Workflow
+
+```bash
+# Terminal 1: Start the server
+jwtforge start
+
+# Terminal 2: In another terminal, use these commands
+# Check if server is running
+jwtforge status
+
+# Generate a basic token
+TOKEN=$(jwtforge token | jq -r .access_token)
+echo $TOKEN
+
+# Generate token with custom claims
+jwtforge token '{"sub":"alice","role":"admin","scope":"openid profile"}' 
+
+# Generate token with EC key
+jwtforge token '{"kty":"EC","sub":"user123"}'
+
+# Generate token with fuzzing mode
+jwtforge token '{"mode":"fuzz","sub":"user123","email":"test@example.com"}'
+
+# Stop the server
+jwtforge stop
+```
+
+## Deploy on CloudAuth Workers
+
+### Requirements
+
+- Cloudflare Account (Free tier works with Workers KV storage)
+- Node.js 18+ (for manual deployment)
+- Wrangler CLI (installed automatically with `make install`)
+
+### One-Click Deploy
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)
 
 Click the button above for instant deployment. Perfect for testing and demos.
 
-### 2. Manual Deploy
+### Manual Deploy
 Clone the repository. Then quick setup and deploy.
 
 ```bash
@@ -918,11 +1021,7 @@ make logs       # Stream logs
 make help       # Show all commands
 ```
 
-### Requirements
 
-- Cloudflare Account (Free tier works with Workers KV storage)
-- Node.js 18+ (for manual deployment)
-- Wrangler CLI (installed automatically with `make install`)
 
 ### Switching to Durable Objects (Optional)
 

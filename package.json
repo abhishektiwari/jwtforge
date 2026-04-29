@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "JWT token vending service for testing with JWKS and OIDC discovery endpoints",
   "main": "src/index.js",
+  "bin": {
+    "jwtforge": "./bin/jwtforge.js"
+  },
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy"
@@ -15,8 +18,21 @@
     "cloudflare-workers",
     "testing"
   ],
-  "author": "",
+  "author": "Abhishek Tiwari",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abhishektiwari/jwtforge.git"
+  },
+  "homepage": "https://github.com/abhishektiwari/jwtforge#readme",
+  "bugs": {
+    "url": "https://github.com/abhishektiwari/jwtforge/issues",
+    "email": "abhishek@abhishek-tiwari.com"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/abhishektiwari"
+  },
   "dependencies": {
     "@faker-js/faker": "^9.2.0",
     "blns": "^2.0.4"
