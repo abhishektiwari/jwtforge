@@ -52,3 +52,6 @@ paper/
 *.postman_collection.json
 .editorconfig
 .gitattributes
+
+# Cloudflare
+.cloudflare/
