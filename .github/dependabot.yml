@@ -1,6 +1,20 @@
 version: 2
 updates:
+  # Check for npm dependency updates
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
-    interval: "weekly"
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "abhishektiwari"
+    assignees:
+      - "abhishektiwari"
+    allow:
+      - dependency-type: "all"
+    commit-message:
+      prefix: "chore(deps):"
+      include: "scope"
+    rebase-strategy: "auto"
