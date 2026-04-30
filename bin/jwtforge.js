@@ -299,7 +299,8 @@ async function main() {
       const { spawn } = require('child_process');
       const child = spawn('npm', ['run', 'cli'], {
         detached: true,
-        stdio: 'ignore'
+        stdio: 'ignore',
+        cwd: path.dirname(path.dirname(__filename))
       });
       child.unref();
 

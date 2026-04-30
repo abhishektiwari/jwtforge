@@ -18,9 +18,9 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 
 ```bash
 # Install globally
-npm install -g jwtforge
+npm install -g abhishektiwari/jwtforge
 # or locally in your project
-npm install jwtforge
+npm install abhishektiwari/jwtforge
 # Generate with default claims
 jwtforge token
 ```
@@ -912,9 +912,9 @@ The easiest way to run JWTForge locally or in CI/CD Pipeline  is using the `jwtf
 ### Installation
 
 ```bash
-npm install -g jwtforge
+npm install -g abhishektiwari/jwtforge
 # or locally in your project
-npm install jwtforge
+npm install abhishektiwari/jwtforge
 ```
 
 ### CLI Commands
