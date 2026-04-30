@@ -35,7 +35,7 @@
     "url": "https://github.com/sponsors/abhishektiwari"
   },
   "dependencies": {
-    "@faker-js/faker": "^9.2.0",
+    "@faker-js/faker": "^10.4.0",
     "blns": "^2.0.4",
     "wrangler": "^4.86.0"
   },
