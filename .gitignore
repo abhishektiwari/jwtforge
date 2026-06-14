@@ -16,6 +16,7 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
+example.db
 
 # IDE
 .vscode/
@@ -27,7 +28,7 @@ Thumbs.db
 paper/
 paper
 .npmrc
-
+coverage/
 
 # Test results
 test-results*

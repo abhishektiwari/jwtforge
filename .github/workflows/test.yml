@@ -1,0 +1,84 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Jest unit tests
+      run: npm test -- --coverage
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v4
+      with:
+        files: ./coverage/lcov.info
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+
+  e2e-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Use Node.js 20.x
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Install wrangler
+      run: npm install -g wrangler
+
+    - name: Start dev server
+      run: npm run dev &
+      timeout-minutes: 1
+
+    - name: Wait for server
+      run: sleep 5 && curl -f http://localhost:8787/ || exit 1
+
+    - name: Run Postman basic collection tests
+      run: npx newman run tests/e2e/JWTForge-Collection.postman_collection.json \
+        -e tests/e2e/JWTForge-Environment-Dev.postman_environment.json \
+        --delay-request 5000 \
+        --reporters cli,json \
+        --reporter-json-export test-results-e2e-basic.json
+
+    - name: Run Postman advanced collection tests
+      run: npx newman run tests/e2e/JWTForge-Collection-Advanced.postman_collection.json \
+        -e tests/e2e/JWTForge-Environment-Dev.postman_environment.json \
+        --delay-request 5000 \
+        --reporters cli,json \
+        --reporter-json-export test-results-e2e-advanced.json
+
+    - name: Upload E2E test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: e2e-test-results
+        path: test-results-*.json

@@ -11,7 +11,10 @@ module.exports = {
     '!src/openapi.js', // Requires request/response context
     '!src/discovery.js', // Requires request context
     '!src/introspect.js', // Requires request context
-    '!src/tokenexchange.js' // Requires request context
+    '!src/tokenexchange.js', // Requires request context
+    '!src/durable.js', // Cloudflare Durable Objects storage backend
+    '!src/kv.js', // Cloudflare Workers KV storage backend
+    '!src/storage.js' // Storage abstraction layer
   ],
   coverageThreshold: {
     global: {
