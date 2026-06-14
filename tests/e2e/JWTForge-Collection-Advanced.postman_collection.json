@@ -1,0 +1,990 @@
+{
+  "info": {
+    "name": "JWTForge Advanced API Tests",
+    "description": "Advanced test collection for JWTForge - Grammar mode, Malicious mode, Fuzz mode, and Exclusions",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Grammar Mode",
+      "description": "Generate tokens using FBNF grammar patterns",
+      "item": [
+        {
+          "name": "Grammar - Valid Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"grammar\",\n  \"grammar_category\": \"valid\",\n  \"sub\": \"user123\",\n  \"scope\": \"openid profile email\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with valid grammar patterns - standard RFC-compliant values"
+          }
+        },
+        {
+          "name": "Grammar - Edge Cases",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"grammar\",\n  \"grammar_category\": \"edge_cases\",\n  \"sub\": \"user456\",\n  \"email\": \"test@example.com\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with edge case grammar patterns - boundary conditions and unusual but valid values"
+          }
+        },
+        {
+          "name": "Grammar - Type Variations",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"grammar\",\n  \"grammar_category\": \"type_variations\",\n  \"sub\": \"user789\",\n  \"aud\": \"https://example.com\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with type variation patterns - different data types (arrays vs strings, numbers, etc.)"
+          }
+        },
+        {
+          "name": "Grammar - Injection Patterns",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"grammar\",\n  \"grammar_category\": \"injection\",\n  \"sub\": \"user_injection\",\n  \"scope\": \"openid\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with injection attack pattern values - tests claim injection handling"
+          }
+        },
+        {
+          "name": "Grammar - Vulnerable Patterns",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"grammar\",\n  \"grammar_category\": \"vulnerable\",\n  \"sub\": \"vulnerable_user\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate token with vulnerable grammar patterns - known security weakness patterns"
+          }
+        },
+        {
+          "name": "Grammar - With Excluded Claims",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"grammar\",\n  \"grammar_category\": \"injection\",\n  \"exclude\": [\"email\", \"phone_number\"],\n  \"sub\": \"protected_user\",\n  \"email\": \"protected@example.com\",\n  \"phone_number\": \"+1-555-0123\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Grammar mode with exclude list - protects specified claims from transformation"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Malicious Mode",
+      "description": "Inject attack payloads with categorized attacks",
+      "item": [
+        {
+          "name": "Malicious - SQL Injection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"sql_injection\",\n  \"sub\": \"user123\",\n  \"scope\": \"openid\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject SQL injection payloads - tests SQL injection defense mechanisms"
+          }
+        },
+        {
+          "name": "Malicious - XSS (Cross-Site Scripting)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"xss\",\n  \"sub\": \"user456\",\n  \"name\": \"Test User\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject XSS payloads - tests XSS defense and claim escaping"
+          }
+        },
+        {
+          "name": "Malicious - Path Traversal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"path_traversal\",\n  \"sub\": \"user789\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject path traversal payloads - tests directory traversal defense"
+          }
+        },
+        {
+          "name": "Malicious - Command Injection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"command_injection\",\n  \"sub\": \"cmd_user\",\n  \"scope\": \"openid\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject command injection payloads - tests shell command injection defense"
+          }
+        },
+        {
+          "name": "Malicious - LDAP Injection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"ldap_injection\",\n  \"sub\": \"ldap_user\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject LDAP injection payloads - tests LDAP query defense"
+          }
+        },
+        {
+          "name": "Malicious - NoSQL Injection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"nosql_injection\",\n  \"sub\": \"nosql_user\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject NoSQL injection payloads - tests NoSQL query defense"
+          }
+        },
+        {
+          "name": "Malicious - XML Injection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"xml_injection\",\n  \"sub\": \"xml_user\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject XML injection payloads - tests XML parsing defense"
+          }
+        },
+        {
+          "name": "Malicious - Template Injection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"template_injection\",\n  \"sub\": \"template_user\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject template injection payloads - tests template engine defense"
+          }
+        },
+        {
+          "name": "Malicious - Header Injection",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"header_injection\",\n  \"sub\": \"header_user\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject header injection payloads - tests HTTP header injection defense"
+          }
+        },
+        {
+          "name": "Malicious - Buffer Overflow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"buffer_overflow\",\n  \"sub\": \"overflow_user\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Inject buffer overflow payloads - tests overflow handling with oversized values"
+          }
+        },
+        {
+          "name": "Malicious - With Excluded Claims",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"sql_injection\",\n  \"exclude\": [\"email\", \"name\"],\n  \"sub\": \"protected_user\",\n  \"email\": \"protected@example.com\",\n  \"name\": \"Protected Name\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Malicious mode with exclude list - protects specified claims from malicious injection"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Fuzz Mode",
+      "description": "Random claim value fuzzing for mutation testing",
+      "item": [
+        {
+          "name": "Fuzz - Random Values",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"fuzz\",\n  \"sub\": \"user123\",\n  \"name\": \"John Doe\",\n  \"email\": \"john@example.com\",\n  \"phone_number\": \"+1-555-0100\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Fuzz mode - randomly mutates all claim values for fuzzing tests"
+          }
+        },
+        {
+          "name": "Fuzz - With Scope",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"fuzz\",\n  \"sub\": \"user456\",\n  \"scope\": \"openid profile email address\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Fuzz mode with OIDC scope - fuzzes scope-derived claims"
+          }
+        },
+        {
+          "name": "Fuzz - With Protected Claims",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"fuzz\",\n  \"exclude\": [\"sub\", \"aud\", \"client_id\"],\n  \"sub\": \"critical_user\",\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane@example.com\",\n  \"aud\": \"https://api.example.com\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Fuzz mode with exclude - protects critical claims while fuzzing others"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Introspection - Advanced Tokens",
+      "description": "Introspect tokens generated with advanced modes",
+      "item": [
+        {
+          "name": "Introspect Grammar Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic Y2xpZW50XzEyMzpjbGllbnRfMTIz"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "token",
+                  "value": "{{grammar_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "token_type_hint",
+                  "value": "access_token",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/introspect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "introspect"
+              ]
+            },
+            "description": "Introspect a token generated with grammar mode - RFC 7662 token introspection"
+          }
+        },
+        {
+          "name": "Introspect Malicious Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic Y2xpZW50XzEyMzpjbGllbnRfMTIz"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "token",
+                  "value": "{{malicious_token}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/introspect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "introspect"
+              ]
+            },
+            "description": "Introspect a token generated with malicious mode - verifies token validity despite attack payloads"
+          }
+        },
+        {
+          "name": "Introspect Fuzz Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              },
+              {
+                "key": "Authorization",
+                "value": "Basic Y2xpZW50XzEyMzpjbGllbnRfMTIz"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "token",
+                  "value": "{{fuzz_token}}",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/introspect",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "introspect"
+              ]
+            },
+            "description": "Introspect a token generated with fuzz mode - verifies fuzzy values are properly introspectable"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Token Exchange - Advanced",
+      "description": "Exchange advanced tokens with claim transformations",
+      "item": [
+        {
+          "name": "Exchange Grammar Token with Claim Transform",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "subject_token",
+                  "value": "{{grammar_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "subject_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:jwt",
+                  "type": "text"
+                },
+                {
+                  "key": "requested_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:access_token",
+                  "type": "text"
+                },
+                {
+                  "key": "resource",
+                  "value": "https://api.example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "add_claims",
+                  "value": "scope:read write,department:engineering",
+                  "type": "text"
+                },
+                {
+                  "key": "remove_claims",
+                  "value": "email_verified,phone_number",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/exchange",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "exchange"
+              ]
+            },
+            "description": "Exchange grammar-mode token with resource change and claim transformation - RFC 8693 token exchange"
+          }
+        },
+        {
+          "name": "Exchange Malicious Token with Claim Cleanup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "subject_token",
+                  "value": "{{malicious_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "subject_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:jwt",
+                  "type": "text"
+                },
+                {
+                  "key": "requested_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:access_token",
+                  "type": "text"
+                },
+                {
+                  "key": "resource",
+                  "value": "https://secure-api.example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "remove_claims",
+                  "value": "email,phone_number",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/exchange",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "exchange"
+              ]
+            },
+            "description": "Exchange malicious-mode token while removing potentially dangerous claims - demonstrates defensive claim cleanup"
+          }
+        },
+        {
+          "name": "Exchange Fuzz Token with Normalization",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/x-www-form-urlencoded"
+              }
+            ],
+            "body": {
+              "mode": "urlencoded",
+              "urlencoded": [
+                {
+                  "key": "subject_token",
+                  "value": "{{fuzz_token}}",
+                  "type": "text"
+                },
+                {
+                  "key": "subject_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:jwt",
+                  "type": "text"
+                },
+                {
+                  "key": "requested_token_type",
+                  "value": "urn:ietf:params:oauth:token-type:access_token",
+                  "type": "text"
+                },
+                {
+                  "key": "audience",
+                  "value": "downstream-service",
+                  "type": "text"
+                },
+                {
+                  "key": "add_claims",
+                  "value": "scope:normalized_scope",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/exchange",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "exchange"
+              ]
+            },
+            "description": "Exchange fuzz-mode token with audience override and scope normalization"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Test Flow Setup",
+      "description": "Setup requests to generate tokens for advanced testing",
+      "item": [
+        {
+          "name": "Setup - Generate Grammar Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"grammar_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Grammar token saved\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"grammar\",\n  \"grammar_category\": \"edge_cases\",\n  \"sub\": \"test_user\",\n  \"scope\": \"openid profile\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate and save grammar token for downstream introspection/exchange tests"
+          }
+        },
+        {
+          "name": "Setup - Generate Malicious Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"malicious_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Malicious token saved\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"sql_injection\",\n  \"sub\": \"test_user\",\n  \"scope\": \"openid\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate and save malicious token for downstream introspection/exchange tests"
+          }
+        },
+        {
+          "name": "Setup - Generate Fuzz Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.environment.set(\"fuzz_token\", jsonData.access_token);",
+                  "    pm.test(\"✓ Fuzz token saved\", function() {",
+                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "    });",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"fuzz\",\n  \"sub\": \"test_user\",\n  \"name\": \"Test User\",\n  \"email\": \"test@example.com\",\n  \"scope\": \"openid profile email\",\n  \"client_id\": \"client_123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate and save fuzz token for downstream introspection/exchange tests"
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8787",
+      "type": "string"
+    },
+    {
+      "key": "grammar_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "malicious_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "fuzz_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}
