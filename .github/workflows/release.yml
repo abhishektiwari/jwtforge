@@ -164,6 +164,22 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Create pre-release GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ needs.generate-version.outputs.github_tag }}
+        name: Pre-release ${{ needs.generate-version.outputs.version }}
+        draft: false
+        prerelease: true
+        token: ${{ secrets.GITHUB_TOKEN }}
+        body: |
+          ## Pre-release ${{ needs.generate-version.outputs.version }}
+
+          This is a pre-release version for testing purposes.
+
+          **PR**: #${{ github.event.number }}
+          **Commit**: ${{ github.sha }}
+
     - name: Comment PR with version
       uses: actions/github-script@v7
       with:
