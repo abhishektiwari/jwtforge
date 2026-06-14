@@ -61,9 +61,19 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     },
                     mode: {
                       type: 'string',
-                      enum: ['fake', 'fuzz', 'malicious'],
+                      enum: ['fake', 'fuzz', 'malicious', 'grammar'],
                       default: 'fake',
-                      description: 'Token generation mode: "fake" (realistic data with OIDC scopes), "fuzz" (random fuzzed values), "malicious" (security testing payloads)'
+                      description: 'Token generation mode: "fake" (realistic data with OIDC scopes), "fuzz" (random fuzzed values), "malicious" (security testing payloads), "grammar" (FBNF grammar-based patterns)'
+                    },
+                    malicious_category: {
+                      type: 'string',
+                      enum: ['sql_injection', 'xss', 'path_traversal', 'command_injection', 'ldap_injection', 'nosql_injection', 'xml_injection', 'template_injection', 'header_injection', 'buffer_overflow'],
+                      description: 'Required when mode=malicious. Selects specific attack category for injection payloads. Example: sql_injection injects SQL patterns into claims.'
+                    },
+                    grammar_category: {
+                      type: 'string',
+                      enum: ['valid', 'edge_cases', 'type_variations', 'injection', 'vulnerable'],
+                      description: 'Optional when mode=grammar. Selects grammar pattern category for claim values. Default: "valid". Example: injection generates claims with injection patterns.'
                     },
                     exclude: {
                       type: 'array',
@@ -245,13 +255,23 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     }
                   },
                   malicious: {
-                    summary: 'Malicious mode (security testing)',
+                    summary: 'Malicious mode with SQL injection (security testing)',
                     value: {
                       mode: 'malicious',
+                      malicious_category: 'sql_injection',
                       sub: 'user123',
                       name: 'Test User',
+                      email: 'test@example.com'
+                    }
+                  },
+                  grammar: {
+                    summary: 'Grammar mode (FBNF patterns - injection category)',
+                    value: {
+                      mode: 'grammar',
+                      grammar_category: 'injection',
+                      sub: 'user123',
                       email: 'test@example.com',
-                      roles: ['user']
+                      scope: 'openid profile'
                     }
                   },
                   fuzzWithExclusions: {
