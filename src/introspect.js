@@ -6,7 +6,7 @@
 /**
  * Decode base64url encoded string
  */
-function base64urlDecode(str) {
+export function base64urlDecode(str) {
   // Add padding if necessary
   let padded = str;
   const remainder = str.length % 4;
@@ -33,7 +33,7 @@ function base64urlDecode(str) {
  * Validate Basic authorization header
  * Accepts alphanumeric, underscores, and/or hyphens in client_id up to 50 characters
  */
-function validateBasicAuth(authHeader) {
+export function validateBasicAuth(authHeader) {
   if (!authHeader || !authHeader.startsWith('Basic ')) {
     return false;
   }

@@ -7,7 +7,7 @@
 /**
  * Decode base64url encoded string
  */
-function base64urlDecode(str) {
+export function base64urlDecode(str) {
   let padded = str;
   const remainder = str.length % 4;
   if (remainder === 1) {
@@ -31,7 +31,7 @@ function base64urlDecode(str) {
  * Extract claims from a JWT token (without validation)
  * Supports: urn:ietf:params:oauth:token-type:jwt, id_token, access_token
  */
-function extractTokenClaims(token, tokenType) {
+export function extractTokenClaims(token, tokenType) {
   try {
     const parts = token.split('.');
     if (parts.length !== 3) {
@@ -48,7 +48,7 @@ function extractTokenClaims(token, tokenType) {
 /**
  * Parse add_claims parameter (format: "key1:value1,key2:value2")
  */
-function parseAddClaims(addClaimsStr) {
+export function parseAddClaims(addClaimsStr) {
   const claims = {};
   if (!addClaimsStr) return claims;
 
@@ -67,7 +67,7 @@ function parseAddClaims(addClaimsStr) {
 /**
  * Parse remove_claims parameter (format: "claim1,claim2,claim3")
  */
-function parseRemoveClaims(removeClaimsStr) {
+export function parseRemoveClaims(removeClaimsStr) {
   if (!removeClaimsStr) return [];
   return removeClaimsStr.split(',').map(c => c.trim()).filter(c => c);
 }

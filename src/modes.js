@@ -59,58 +59,84 @@ export function getFuzzedAlgorithm() {
 }
 
 /**
- * Generate malicious payloads for security testing
+ * Categorized malicious payloads for security testing
  */
-export function getMaliciousValue() {
-  const maliciousPatterns = [
-    // SQL Injection
+const maliciousPayloads = {
+  sql_injection: [
     "' OR '1'='1",
     "'; DROP TABLE users; --",
     "admin' --",
     "' UNION SELECT NULL--",
     "1' AND '1'='1",
-
-    // XSS
+  ],
+  xss: [
     "<script>alert('xss')</script>",
     "<img src=x onerror=alert('xss')>",
     "javascript:alert('xss')",
     "<svg onload=alert('xss')>",
     "'\"><script>alert(String.fromCharCode(88,83,83))</script>",
-
-    // Path Traversal
+  ],
+  path_traversal: [
     "../../../etc/passwd",
     "..\\..\\..\\windows\\system32\\config\\sam",
     "....//....//....//etc/passwd",
-
-    // Command Injection
+  ],
+  command_injection: [
     "; ls -la",
     "| cat /etc/passwd",
     "`whoami`",
     "$(whoami)",
-
-    // LDAP Injection
+  ],
+  ldap_injection: [
     "*)(uid=*))(|(uid=*",
     "admin)(|(password=*))",
-
-    // NoSQL Injection
+  ],
+  nosql_injection: [
     "{'$gt':''}",
     "{'$ne':null}",
-
-    // XML Injection
+  ],
+  xml_injection: [
     "<?xml version='1.0'?><!DOCTYPE foo [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]>",
-
-    // Template Injection
+  ],
+  template_injection: [
     "{{7*7}}",
     "${7*7}",
     "{{config.items()}}",
-
-    // Header Injection
+  ],
+  header_injection: [
     "test\r\nInjected-Header: malicious",
-
-    // Overflow
+  ],
+  buffer_overflow: [
     "A".repeat(1000000),
-  ];
-  return maliciousPatterns[Math.floor(Math.random() * maliciousPatterns.length)];
+  ],
+};
+
+/**
+ * Generate malicious payloads for security testing
+ * @param {string} category - Optional specific category (sql_injection, xss, command_injection, etc.)
+ * @returns {string} A malicious payload
+ */
+export function getMaliciousValue(category = null) {
+  let payloads;
+
+  if (category && maliciousPayloads[category]) {
+    // Return from specific category
+    payloads = maliciousPayloads[category];
+  } else {
+    // Return from all categories (mixed)
+    const allPayloads = Object.values(maliciousPayloads).flat();
+    return allPayloads[Math.floor(Math.random() * allPayloads.length)];
+  }
+
+  return payloads[Math.floor(Math.random() * payloads.length)];
+}
+
+/**
+ * Get all available malicious categories
+ * @returns {Array<string>} List of category names
+ */
+export function getMaliciousCategories() {
+  return Object.keys(maliciousPayloads);
 }
 
 /**
@@ -121,11 +147,15 @@ export function getMaliciousValue() {
  * @returns {Object} Transformed claims
  */
 export function applyModeTransformations(claims, mode, exclude = []) {
-  if (mode === 'fuzz' || mode === 'malicious') {
-    const modifiedClaims = { ...claims };
+  const modifiedClaims = { ...claims };
 
-    // Always protect these metadata fields
-    const alwaysProtected = ['iss', 'jti', 'kty', 'response_type', 'mode', 'exclude'];
+  // Metadata fields to remove from result
+  const metadataFields = ['mode', 'exclude', '__maliciousCategory', 'malicious_category', 'grammar_category'];
+  metadataFields.forEach(field => delete modifiedClaims[field]);
+
+  if (mode === 'fuzz' || mode === 'malicious') {
+    // Always protect these fields from transformation
+    const alwaysProtected = ['iss', 'jti', 'kty', 'response_type'];
 
     // Combine always-protected fields with user-specified exclusions
     const protectedFields = [...alwaysProtected, ...exclude];
@@ -152,14 +182,18 @@ export function applyModeTransformations(claims, mode, exclude = []) {
 
       // Apply transformations
       fieldsToModify.forEach(key => {
-        modifiedClaims[key] = mode === 'fuzz' ? getFuzzedValue() : getMaliciousValue();
+        if (mode === 'fuzz') {
+          modifiedClaims[key] = getFuzzedValue();
+        } else {
+          // maliciousCategory is passed through claims object
+          const category = modifiedClaims.__maliciousCategory || null;
+          modifiedClaims[key] = getMaliciousValue(category);
+        }
       });
     }
-
-    return modifiedClaims;
   }
 
-  return claims;
+  return modifiedClaims;
 }
 
 /**
@@ -188,7 +222,13 @@ export function applyHeaderTransformations(requestData, mode, exclude = []) {
 
     // Transform header_kid if provided and not excluded
     if (requestData.header_kid !== undefined && !exclude.includes('header_kid')) {
-      headerOverrides.kid = mode === 'fuzz' ? getFuzzedValue() : getMaliciousValue();
+      if (mode === 'fuzz') {
+        headerOverrides.kid = getFuzzedValue();
+      } else {
+        // Use malicious_category if provided for header fields
+        const category = requestData.malicious_category || null;
+        headerOverrides.kid = getMaliciousValue(category);
+      }
     } else if (requestData.header_kid !== undefined) {
       // If excluded, use the provided value
       headerOverrides.kid = requestData.header_kid;
@@ -204,4 +244,136 @@ export function applyHeaderTransformations(requestData, mode, exclude = []) {
   }
 
   return headerOverrides;
+}
+
+/**
+ * Apply grammar-based transformations to claims
+ * Selects values from grammar rules for systematic JWT testing
+ * @param {Object} claims - The claims object to transform
+ * @param {Object} grammar - The complete grammar object from grammar.js
+ * @param {Array<string>} exclude - List of claim keys to exclude from transformation
+ * @param {string} grammarCategory - Optional specific grammar category to use (valid, edge_cases, injection, etc.)
+ * @returns {Object} Transformed claims with grammar-selected values
+ */
+export function applyGrammarTransformations(claims, grammar, exclude = [], grammarCategory = null) {
+  if (!grammar || !grammar.standardClaims) {
+    return claims;
+  }
+
+  const modifiedClaims = { ...claims };
+  const alwaysProtected = ['iss', 'jti', 'kty', 'response_type', 'mode', 'exclude', 'grammar_category', 'malicious_category'];
+  const protectedFields = [...alwaysProtected, ...exclude];
+
+  // Iterate through claims and apply grammar rules where available
+  Object.keys(modifiedClaims).forEach(claimKey => {
+    // Skip protected fields
+    if (protectedFields.includes(claimKey)) {
+      return;
+    }
+
+    let grammarRule = null;
+
+    // Look up grammar rule for this claim
+    if (grammar.standardClaims && grammar.standardClaims[claimKey]) {
+      grammarRule = grammar.standardClaims[claimKey];
+    } else if (grammar.oidcClaims && grammar.oidcClaims[claimKey]) {
+      grammarRule = grammar.oidcClaims[claimKey];
+    } else if (grammar.authClaims && grammar.authClaims[claimKey]) {
+      grammarRule = grammar.authClaims[claimKey];
+    }
+
+    // Apply grammar rule if found
+    if (grammarRule) {
+      modifiedClaims[claimKey] = selectRandomFromGrammar(grammarRule, grammarCategory);
+    }
+  });
+
+  return modifiedClaims;
+}
+
+/**
+ * Apply grammar-based transformations to JWT header
+ * @param {Object} requestData - The request data
+ * @param {Object} grammar - The complete grammar object
+ * @param {Array<string>} exclude - Header fields to exclude
+ * @param {string} grammarCategory - Optional specific grammar category to use
+ * @returns {Object} Header overrides
+ */
+export function applyGrammarHeaderTransformations(requestData, grammar, exclude = [], grammarCategory = null) {
+  if (!grammar || !grammar.header) {
+    return {};
+  }
+
+  const headerOverrides = {};
+
+  // Apply grammar to header_alg if provided and not excluded
+  if (requestData.header_alg !== undefined && !exclude.includes('header_alg')) {
+    const algRule = grammar.header.alg;
+    if (algRule) {
+      headerOverrides.alg = selectRandomFromGrammar(algRule, grammarCategory);
+    }
+  } else if (requestData.header_alg !== undefined) {
+    headerOverrides.alg = requestData.header_alg;
+  }
+
+  // Apply grammar to header_kid if provided and not excluded
+  if (requestData.header_kid !== undefined && !exclude.includes('header_kid')) {
+    const kidRule = grammar.header.kid;
+    if (kidRule) {
+      headerOverrides.kid = selectRandomFromGrammar(kidRule, grammarCategory);
+    }
+  } else if (requestData.header_kid !== undefined) {
+    headerOverrides.kid = requestData.header_kid;
+  }
+
+  return headerOverrides;
+}
+
+/**
+ * Select a random value from a grammar rule
+ * Randomly picks from one of the rule categories (valid, edge_cases, injection, type_variations, etc.)
+ * @param {Object} rule - A grammar rule object with various categories
+ * @param {string} specificCategory - Optional specific category to select from (valid, edge_cases, injection, etc.)
+ * @returns {*} A random value from the rule
+ */
+function selectRandomFromGrammar(rule, specificCategory = null) {
+  // If specific category requested, try to use it
+  if (specificCategory && rule[specificCategory] && Array.isArray(rule[specificCategory]) && rule[specificCategory].length > 0) {
+    const values = rule[specificCategory];
+    return values[Math.floor(Math.random() * values.length)];
+  }
+
+  // Available categories in order of preference (if no specific category)
+  const categories = [
+    'valid',
+    'valid_values',
+    'edge_cases',
+    'type_variations',
+    'injection',
+    'invalid',
+    'vulnerable',
+    'variations',
+    'single',
+    'array',
+    'single_string',
+    'invalid_types',
+    'common',
+    'custom'
+  ];
+
+  // Try categories in order
+  for (const category of categories) {
+    if (rule[category] && Array.isArray(rule[category]) && rule[category].length > 0) {
+      const values = rule[category];
+      return values[Math.floor(Math.random() * values.length)];
+    }
+  }
+
+  // Fallback: if rule has a single value property
+  if (rule.value !== undefined) {
+    return rule.value;
+  }
+
+  // Last resort: return null
+  return null;
 }

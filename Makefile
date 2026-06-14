@@ -1,18 +1,27 @@
-.PHONY: help install dev deploy logs tail test clean
+.PHONY: help install dev deploy logs tail test test-unit test-integration test-coverage test-watch test-server clean
 
 # Default target
 help:
 	@echo "JWTForge - Makefile commands"
 	@echo ""
-	@echo "Available commands:"
-	@echo "  make install    - Install dependencies"
-	@echo "  make dev        - Run local development server"
-	@echo "  make deploy     - Deploy to Cloudflare Workers"
-	@echo "  make logs       - Stream real-time logs from deployed worker"
-	@echo "  make tail       - Alias for logs"
-	@echo "  make test       - Run test requests against local server"
-	@echo "  make test-prod  - Run test requests against production"
-	@echo "  make clean      - Clean node_modules and cache"
+	@echo "Setup & Deployment:"
+	@echo "  make install       - Install dependencies"
+	@echo "  make dev           - Run local development server"
+	@echo "  make deploy        - Deploy to Cloudflare Workers"
+	@echo "  make logs          - Stream real-time logs from deployed worker"
+	@echo "  make tail          - Alias for logs"
+	@echo ""
+	@echo "Testing:"
+	@echo "  make test-unit     - Run unit tests (modes, grammar)"
+	@echo "  make test-feature  - Run feature tests (token generation, introspection, exchange, keys)"
+	@echo "  make test-all      - Run all Jest tests"
+	@echo "  make test-watch    - Run tests in watch mode"
+	@echo "  make test-coverage - Generate coverage report"
+	@echo "  make test-server   - Run integration tests against local server (manual)"
+	@echo "  make test-prod     - Run tests against production server"
+	@echo ""
+	@echo "Maintenance:"
+	@echo "  make clean         - Clean node_modules and cache"
 	@echo ""
 
 # Install dependencies
@@ -38,8 +47,52 @@ logs:
 # Alias for logs
 tail: logs
 
-# Test local development server
-test:
+# Run all Jest tests (default test target)
+test: test-all
+
+# Run unit tests (modes and grammar)
+test-unit:
+	@echo "Running unit tests (modes, grammar)..."
+	npm run test -- modes.test.js grammar.test.js
+	@echo ""
+	@echo "✓ Unit tests completed"
+	@echo ""
+
+# Run feature tests (token generation, introspection, exchange, key management)
+test-feature:
+	@echo "Running feature tests (token generation, introspection, exchange, key management)..."
+	npm run test -- token-generation.test.js token-operations.test.js key-management.test.js
+	@echo ""
+	@echo "✓ Feature tests completed"
+	@echo ""
+
+# Run all Jest tests
+test-all:
+	@echo "Running all Jest tests..."
+	@echo ""
+	npm run test -- --verbose
+	@echo ""
+	@echo "✓ All tests completed"
+	@echo ""
+
+# Run tests in watch mode
+test-watch:
+	@echo "Running tests in watch mode..."
+	@echo "Tests will re-run automatically when files change."
+	@echo ""
+	npm run test:watch
+
+# Generate test coverage report
+test-coverage:
+	@echo "Generating test coverage report..."
+	@echo ""
+	npm run test:coverage
+	@echo ""
+	@echo "✓ Coverage report generated in ./coverage/index.html"
+	@echo ""
+
+# Run integration tests against local server
+test-server:
 	@echo "Testing local server (http://localhost:8787)..."
 	@echo ""
 	@echo "1. Testing root endpoint..."

@@ -6,11 +6,12 @@
 import { KeyStore } from './durable.js';
 import { handleOpenAPIRequest, handleRootRequest } from './openapi.js';
 import { getKeyStorage } from './storage.js';
-import { applyModeTransformations, applyHeaderTransformations } from './modes.js';
+import { applyModeTransformations, applyHeaderTransformations, applyGrammarTransformations, applyGrammarHeaderTransformations } from './modes.js';
 import { handleIntrospectionRequest } from './introspect.js';
 import { handleDiscoveryRequest } from './discovery.js';
 import { parseTokenExchangeRequest } from './tokenexchange.js';
 import { faker } from '@faker-js/faker';
+import { getCompleteGrammar } from './grammar.js';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
 const memoryCache = new Map();
@@ -114,7 +115,7 @@ async function generateKeyInMemory(kty, kid) {
 /**
  * Base64URL encode
  */
-function base64urlEncode(buffer) {
+export function base64urlEncode(buffer) {
   const bytes = new Uint8Array(buffer);
   let binary = '';
   for (let i = 0; i < bytes.byteLength; i++) {
@@ -129,7 +130,7 @@ function base64urlEncode(buffer) {
 /**
  * Map OIDC scopes to default claims using faker for realistic test data
  */
-function getDefaultClaimsFromScope(scope) {
+export function getDefaultClaimsFromScope(scope) {
   const scopes = scope ? scope.toLowerCase().split(' ') : [];
   const defaultClaims = {};
 
@@ -277,14 +278,14 @@ async function createJWT(claims, keyData, headerOverrides = {}, skipSignature = 
  * Validate client_id format
  * Accepts alphanumeric, underscores, and/or hyphens, up to 50 characters
  */
-function validateClientIdFormat(clientId) {
+export function validateClientIdFormat(clientId) {
   return /^[a-zA-Z0-9_-]{1,50}$/.test(clientId);
 }
 
 /**
  * Generate random client ID for backward compatibility
  */
-function generateRandomClientId() {
+export function generateRandomClientId() {
   return `client_${crypto.randomUUID().substring(0, 8)}`;
 }
 
@@ -492,11 +493,17 @@ async function handleTokenRequest(request, env) {
     const keyData = await getKeyData(env, kty);
 
     // Extract mode from request, default to 'fake'
-    // Supported modes: 'fake' (default), 'fuzz', 'malicious'
+    // Supported modes: 'fake' (default), 'fuzz', 'malicious', 'grammar'
     const mode = requestData.mode || 'fake';
 
     // Extract exclude list from request (claims to protect from fuzz/malicious modes)
     const exclude = requestData.exclude || [];
+
+    // Extract malicious_category for malicious mode (e.g., sql_injection, xss, command_injection)
+    const maliciousCategory = requestData.malicious_category || null;
+
+    // Extract grammar_category for grammar mode (e.g., valid, edge_cases, injection, vulnerable)
+    const grammarCategory = requestData.grammar_category || null;
 
     // Extract sig parameter (defaults to true, when false generates unsigned tokens)
     const skipSignature = requestData.sig === false;
@@ -511,8 +518,15 @@ async function handleTokenRequest(request, env) {
     // Get default claims based on requested scopes (only for 'fake' mode)
     const scopeDefaults = mode === 'fake' ? getDefaultClaimsFromScope(requestData.scope) : {};
 
-    // Apply header transformations (for alg and kid)
-    const headerOverrides = applyHeaderTransformations(requestData, mode, exclude);
+    // Load grammar for grammar mode
+    let headerOverrides = {};
+    if (mode === 'grammar') {
+      const grammar = getCompleteGrammar();
+      headerOverrides = applyGrammarHeaderTransformations(requestData, grammar, exclude, grammarCategory);
+    } else {
+      // Apply header transformations (for alg and kid) for fuzz/malicious modes
+      headerOverrides = applyHeaderTransformations(requestData, mode, exclude);
+    }
 
     // Generate access token
     if (shouldGenerateAccessToken) {
@@ -523,13 +537,25 @@ async function handleTokenRequest(request, env) {
         kty: undefined,
         mode: undefined,
         exclude: undefined,
+        grammar_category: undefined,
+        malicious_category: undefined,
         header_alg: undefined,
         header_kid: undefined,
         sig: undefined
       };
 
-      // Apply mode transformations (fuzz/malicious) with exclusions
-      accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
+      // Apply mode transformations (fuzz/malicious/grammar) with exclusions
+      if (mode === 'grammar') {
+        const grammar = getCompleteGrammar();
+        accessTokenClaims = applyGrammarTransformations(accessTokenClaims, grammar, exclude, grammarCategory);
+      } else if (mode === 'malicious') {
+        // Pass maliciousCategory through internal field for getMaliciousValue
+        accessTokenClaims.__maliciousCategory = maliciousCategory;
+        accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
+        delete accessTokenClaims.__maliciousCategory;
+      } else {
+        accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
+      }
 
       const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, skipSignature);
       response.access_token = accessToken;
@@ -545,6 +571,8 @@ async function handleTokenRequest(request, env) {
         kty: undefined,
         mode: undefined,
         exclude: undefined,
+        grammar_category: undefined,
+        malicious_category: undefined,
         header_alg: undefined,
         header_kid: undefined,
         sig: undefined,
@@ -554,8 +582,18 @@ async function handleTokenRequest(request, env) {
         ...(shouldGenerateAccessToken && response.access_token ? { at_hash: 'placeholder' } : {})
       };
 
-      // Apply mode transformations (fuzz/malicious) with exclusions
-      idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
+      // Apply mode transformations (fuzz/malicious/grammar) with exclusions
+      if (mode === 'grammar') {
+        const grammar = getCompleteGrammar();
+        idTokenClaims = applyGrammarTransformations(idTokenClaims, grammar, exclude, grammarCategory);
+      } else if (mode === 'malicious') {
+        // Pass maliciousCategory through internal field for getMaliciousValue
+        idTokenClaims.__maliciousCategory = maliciousCategory;
+        idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
+        delete idTokenClaims.__maliciousCategory;
+      } else {
+        idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
+      }
 
       const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, skipSignature);
       response.id_token = idToken;

@@ -12,6 +12,7 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 ![Durable Objects](https://img.shields.io/badge/Storage-Durable%20Objects%20(Optional)-green.svg)
 ![Faker.js](https://img.shields.io/badge/Test%20Data-Faker.js-yellow.svg)
 ![BLNS](https://img.shields.io/badge/Fuzzing-BLNS-red.svg)
+![Grammar](https://img.shields.io/badge/Testing-Grammar%20Mode-9cf.svg)
  [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.59350/6pdmd-3cm41)](https://juleskreuer.eu//projects/citation-badge)
 
 **Quick Start with CLI** locally or as part of CI/CD pipeline
@@ -27,10 +28,11 @@ jwtforge token
 
 ## Supports
 
-- Testing Modes: Three modes for different testing scenarios - applied to both header and payload.
+- Testing Modes: Four modes for different testing scenarios - applied to both header and payload.
   - `fake` (default): Realistic test data using faker.js with OIDC scopes
   - `fuzz`: Randomized fuzzing using `BLNS` (Big List of Naughty Strings) + edge cases
   - `malicious`: Injection payloads (SQL, XSS, command injection, path traversal, etc.)
+  - `grammar`: Systematic JWT testing using grammar-based rules (RFC 7519, OIDC, OAuth2 compliant)
 - OAuth2/OIDC Response Types: Standard `response_type` parameter (`token`, `id_token`, `id_token token`)
 - OAuth2 Client Credentials Grant: Machine-to-machine token generation with spec-compliant `client_credentials` grant type
 - OIDC Scope Support: Automatic claim population based on scopes (openid, profile, email, address, phone)
@@ -421,9 +423,57 @@ curl -X POST https://your-worker.workers.dev/token \
 - Add/remove claims to customize token for downstream services
 - Test multi-hop token exchange scenarios
 
+### Grammar Mode - Systematic Security Testing
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "grammar",
+    "sub": "user123",
+    "scope": "openid profile email"
+  }'
+```
+
+### Grammar Mode with Exclusions
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "grammar",
+    "sub": "user123",
+    "exclude": ["exp", "iat", "nbf"]
+  }'
+```
+
+### Compare All Modes
+```bash
+# Mode: fake - Realistic data
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{"mode": "fake", "sub": "user", "scope": "openid profile"}'
+
+# Mode: fuzz - 1-3 random claims with BLNS
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{"mode": "fuzz", "sub": "user", "email": "test@example.com"}'
+
+# Mode: malicious - 1-3 random claims with injection payloads
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{"mode": "malicious", "sub": "user", "email": "test@example.com"}'
+
+# Mode: grammar - All claims with grammar-based values (comprehensive)
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{"mode": "grammar", "sub": "user", "email": "test@example.com"}'
+```
+
 ## Security Testing Modes
 
-JWTForge supports three modes for different testing scenarios via the `mode` parameter:
+JWTForge supports four modes for different testing scenarios via the `mode` parameter:
+
+| Mode | Purpose | Coverage | Use Case |
+|------|---------|----------|----------|
+| `fake` | Realistic test data | OIDC scopes, faker.js | Integration testing, demos |
+| `fuzz` | Random fuzzing with edge cases | 1-3 claims mutated | Robustness testing, edge case discovery |
+| `malicious` | Security payload injection | 1-3 claims with attacks | Penetration testing, security validation |
+| `grammar` | Systematic JWT specification testing | All claims with grammar rules | Comprehensive security testing, spec compliance |
 
 ### Mode: `fake` (Default)
 Generates realistic test data using faker.js when OIDC scopes are specified.
@@ -471,7 +521,7 @@ Example Output (random selection):
 ```
 
 ### Mode: `malicious`
-Randomly injects 1-3 malicious payloads for security testing.
+Randomly injects 1-3 malicious payloads for security testing. Designed to validate input sanitization and injection defense mechanisms.
 
 ```bash
 curl -X POST https://your-worker.workers.dev/token \
@@ -485,16 +535,54 @@ curl -X POST https://your-worker.workers.dev/token \
   }'
 ```
 
-Malicious Payloads Include:
-- SQL Injection: `' OR '1'='1`, `'; DROP TABLE users; --`, `' UNION SELECT NULL--`
-- XSS: `<script>alert('xss')</script>`, `<img src=x onerror=alert('xss')>`
-- Path Traversal: `../../../etc/passwd`, `....//....//....//etc/passwd`
-- Command Injection: `; ls -la`, `| cat /etc/passwd`, `` `whoami` ``
-- LDAP Injection: `*)(uid=*))(|(uid=*`
-- NoSQL Injection: `{'$gt':''}`, `{'$ne':null}`
-- Template Injection: `{{7*7}}`, `${7*7}`, `{{config.items()}}`
-- XML/XXE: XML entities and external entity attacks
-- Header Injection: CRLF injection attempts
+**Malicious Payloads Included:**
+
+**SQL Injection (Database Attacks)**
+- `' OR '1'='1` - Classic boolean-based injection
+- `'; DROP TABLE users; --` - Destructive query
+- `admin' --` - Comment-based bypass
+- `' UNION SELECT NULL--` - Data extraction
+- `1' AND '1'='1` - Conditional bypass
+
+**Cross-Site Scripting (XSS)**
+- `<script>alert('xss')</script>` - Script tag injection
+- `<img src=x onerror=alert('xss')>` - Event handler injection
+- `javascript:alert('xss')` - Protocol-based XSS
+- `<svg onload=alert('xss')>` - SVG-based injection
+- `'\"><script>alert(String.fromCharCode(88,83,83))</script>` - Encoded payload
+
+**Path Traversal (Directory Access)**
+- `../../../etc/passwd` - Unix credential file
+- `..\\..\\..\\windows\\system32\\config\\sam` - Windows SAM database
+- `....//....//....//etc/passwd` - Obfuscated traversal
+
+**Command Injection (OS Command Execution)**
+- `; ls -la` - Command separator injection
+- `| cat /etc/passwd` - Pipe injection
+- `` `whoami` `` - Backtick command substitution
+- `$(whoami)` - Dollar-sign command substitution
+
+**LDAP Injection (Directory Service Attacks)**
+- `*)(uid=*))(|(uid=*` - Filter manipulation
+- `admin)(|(password=*)` - OR-based bypass
+
+**NoSQL Injection (Document Database Attacks)**
+- `{'$gt':''}` - MongoDB greater-than operator
+- `{'$ne':null}` - MongoDB not-equal operator
+
+**XML/XXE Injection (XML External Entity)**
+- `<?xml version='1.0'?><!DOCTYPE foo [<!ENTITY xxe SYSTEM 'file:///etc/passwd'>]>` - External entity
+
+**Template Injection (Template Engine Attacks)**
+- `{{7*7}}` - Jinja2/Handlebars expression
+- `${7*7}` - Freemarker expression
+- `{{config.items()}}` - Server-side template execution
+
+**Header Injection (HTTP Manipulation)**
+- `test\r\nInjected-Header: malicious` - CRLF injection for header splitting
+
+**Buffer Overflow**
+- `A` repeated 1,000,000 times - Large payload test
 
 Example Output (random selection):
 ```json
@@ -504,6 +592,60 @@ Example Output (random selection):
   "email": "' OR '1'='1",  // SQL injection in email
   "roles": "*)(uid=*))(|(uid=*"  // LDAP injection in roles
 }
+```
+
+**Security Testing Use Cases:**
+- Validate input sanitization and escaping
+- Test against injection attacks (SQL, NoSQL, LDAP, etc.)
+- Verify XSS protection mechanisms
+- Test path traversal defenses
+- Validate command execution protections
+- Test template engine security
+- Verify header parsing robustness
+
+**Available Malicious Categories**
+
+Use the `malicious_category` parameter to focus on specific attack vectors:
+
+| Category | Payloads | Use Case | Example |
+|----------|----------|----------|---------|
+| `sql_injection` | 5 SQL attack patterns | Test SQL injection defenses | `' OR '1'='1` |
+| `xss` | 5 XSS payloads | Test XSS protection | `<script>alert('xss')</script>` |
+| `path_traversal` | 3 directory traversal patterns | Test path access controls | `../../../etc/passwd` |
+| `command_injection` | 4 command execution patterns | Test command injection defenses | `; ls -la` |
+| `ldap_injection` | 2 LDAP filter attacks | Test LDAP security | `*)(uid=*))(|(uid=*` |
+| `nosql_injection` | 2 NoSQL attacks | Test NoSQL injection defenses | `{'$ne':null}` |
+| `xml_injection` | 1 XXE pattern | Test XML entity handling | XXE external entity attack |
+| `template_injection` | 3 template engine attacks | Test template engine security | `{{7*7}}` |
+| `header_injection` | 1 CRLF injection | Test header parsing | CRLF-based header splitting |
+| `buffer_overflow` | 1 large payload | Test payload size limits | 1 million 'A' characters |
+| *(omitted)* | All categories mixed | Random injection testing | Random from all categories |
+
+**Malicious Category Examples:**
+```bash
+# Test SQL injection specifically
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "malicious",
+    "malicious_category": "sql_injection",
+    "email": "test@example.com"
+  }'
+
+# Test XSS vulnerabilities
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "malicious",
+    "malicious_category": "xss",
+    "name": "Test User"
+  }'
+
+# Test command injection
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "malicious",
+    "malicious_category": "command_injection",
+    "custom_field": "test"
+  }'
 ```
 
 ### Exclusion List
@@ -531,11 +673,168 @@ Common Use Cases:
 - `exclude: ["sub", "aud"]` - Protect subject and audience while fuzzing other claims
 - `exclude: ["roles", "permissions"]` - Test authorization logic without fuzzing permissions
 
+### Mode: `grammar`
+Systematic JWT testing using grammar rules based on RFC 7519 (JWT), RFC 7518 (JWA), and OpenID Connect specifications. Tests all claims with values from defined grammar categories.
+
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "mode": "grammar",
+    "sub": "user123",
+    "scope": "openid profile email"
+  }'
+```
+
+**What Grammar Mode Does:**
+- For EACH claim, selects values from grammar rules (not random 1-3 claims)
+- Provides systematic coverage of JWT specification space
+- Tests valid values, edge cases, type variations, and injection patterns
+- Ensures comprehensive security and spec compliance testing
+
+**Grammar Categories for Each Claim:**
+1. **Valid**: RFC-compliant values
+   - `alg`: `HS256`, `RS256`, `ES256`, `PS256`, etc.
+   - `sub`: User identifiers, email addresses, UUIDs
+   - `aud`: Single string or array of audience values
+   
+2. **Edge Cases**: Boundary conditions and unusual values
+   - `exp`: Past dates, zero, negative numbers, null
+   - `nbf`: Future dates, null values
+   - Time-based claims with out-of-range values
+   
+3. **Type Variations**: Wrong data types for claims
+   - String claims as arrays: `["value"]`
+   - Arrays as strings: `"value1,value2"`
+   - Numbers as strings: `"123"` instead of `123`
+   - Booleans with different types: `"true"`, `1`, `0`
+   
+4. **Injection Patterns**: Security-relevant patterns
+   - SQL injection in string claims
+   - XSS payloads in URLs and names
+   - Path traversal in file-related claims
+   - Command injection in command-like fields
+
+**Example Output (Grammar Mode):**
+```json
+{
+  "sub": "user123",                              // From grammar.standardClaims.sub.valid
+  "scope": "openid profile",                     // From grammar.authClaims.scope.valid
+  "email": null,                                 // From grammar.oidcClaims.email.edge_cases
+  "email_verified": "true",                      // From grammar.oidcClaims.email_verified.edge_cases (type variation)
+  "name": ["John Doe"],                          // From grammar.oidcClaims.name.edge_cases (array instead of string)
+  "phone_number": "../../../etc/passwd",         // From grammar.authClaims.phone_number.edge_cases
+  "exp": -1,                                     // From grammar.standardClaims.exp.edge_cases (negative expiration)
+  "aud": ["api1", "api2"],                       // From grammar.standardClaims.aud.array
+  "alg": "none"                                  // From grammar.headerGrammar.alg.vulnerable
+}
+```
+
+**Advantages Over Random Fuzzing:**
+| Aspect | Fuzz | Malicious | Grammar |
+|--------|------|-----------|---------|
+| Claims tested | 1-3 random | 1-3 random | All claims |
+| Test coverage | Spotty | Spotty | Systematic |
+| Type variations | No | No | Yes |
+| Spec-aligned | No | No | Yes |
+| Repeatable | No | No | Predictable from rules |
+| Edge cases | Limited | Limited | Comprehensive |
+
+**Grammar Mode Use Cases:**
+- Comprehensive JWT spec compliance testing
+- Systematic vulnerability discovery
+- Type handling validation
+- Boundary condition testing
+- Repeated security scanning with consistent coverage
+
+**Available Grammar Categories**
+
+Use the `grammar_category` parameter to focus on specific types of test values:
+
+| Category | Description | Example Values | Use Case |
+|----------|-------------|-----------------|----------|
+| `valid` | RFC-compliant standard values | `HS256`, `user123`, `https://example.com`, `["api1", "api2"]` | Validate token acceptance with valid data |
+| `edge_cases` | Boundary conditions and unusual values | `null`, `0`, `-1`, `""`, empty array `[]` | Test edge case handling |
+| `type_variations` | Wrong data types for claims | String array: `["user123"]`, Number string: `"123"`, Boolean string: `"true"` | Test type validation/coercion |
+| `injection` | Security-relevant injection patterns | SQL: `' OR '1'='1`, XSS: `<script>alert(1)</script>`, Path: `../../../etc/passwd` | Security vulnerability testing |
+| `invalid` | Invalid format values | Empty string, wrong type, out-of-range, malformed | Test error handling |
+| `vulnerable` | Algorithm confusion and vulnerable patterns | `alg: "none"`, `alg: "NONE"`, `alg: "HS256"` with RSA key | Test algorithm validation |
+| *(omitted)* | All categories mixed (random) | Random selection from all categories above | Comprehensive fuzzing |
+
+**Grammar Category Details by Claim Type:**
+
+| Claim | Valid | Edge Cases | Type Variations | Injection |
+|-------|-------|-----------|-----------------|-----------|
+| `sub` | `"user123"`, `"admin"` | `""`, `null` | `123`, `["user123"]` | `' OR '1'='1`, `admin" OR "1"="1` |
+| `exp` | Future timestamp | `0`, `-1`, `null` | `"9999999999"`, `Infinity` | N/A |
+| `aud` | `"api.example.com"`, `["api1"]` | `""`, `null`, `[]` | `123`, `{"aud": "api"}` | `api"; "role":"admin` |
+| `email` | `"user@example.com"` | `""`, `null` | `["email@test.com"]`, `123` | `test@example.com\r\nBcc:attacker` |
+| `name` | `"John Doe"` | `""`, `null` | `["John Doe"]`, `123` | `<script>alert(1)</script>`, `O'Reilly` |
+| `alg` (header) | `"RS256"`, `"ES256"` | Empty, `null` | `256`, `["RS256"]` | `"none"`, `"NONE"`, `"HS256"` |
+| `nbf` | Current timestamp | Future time, `null` | `"1234567890"`, `Infinity` | N/A |
+| `roles` | `["admin"]`, `"admin"` | `[]`, `null` | `"admin"`, `123` | `["admin\r\nInjected:true"]` |
+
+**Grammar Category Examples:**
+```bash
+# Test with valid RFC-compliant values
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "grammar",
+    "grammar_category": "valid",
+    "sub": "user123",
+    "scope": "openid profile email"
+  }'
+
+# Test with edge cases (null, boundaries, etc.)
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "grammar",
+    "grammar_category": "edge_cases",
+    "sub": "user123"
+  }'
+
+# Test with wrong data types
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "grammar",
+    "grammar_category": "type_variations",
+    "email": "test@example.com"
+  }'
+
+# Test with injection patterns
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "grammar",
+    "grammar_category": "injection",
+    "name": "Test User"
+  }'
+
+# Test algorithm confusion vulnerabilities
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "grammar",
+    "grammar_category": "vulnerable",
+    "sub": "user123"
+  }'
+```
+
+**Note**: Grammar mode provides more thorough testing than random modes but is slower (processes all claims vs 1-3). Combine with `exclude` parameter to focus on specific claims:
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -d '{
+    "mode": "grammar",
+    "grammar_category": "edge_cases",
+    "sub": "user123",
+    "exclude": ["exp", "iat", "nbf"]  # Test all claims except time-based ones
+  }'
+```
+
 **Important Notes**:
 - Always protected (cannot be fuzzed): `iss`, `jti` (required for valid JWT structure)
-- By default, ALL claims except `iss` and `jti` can be fuzzed in `fuzz`/`malicious` modes, including `exp`, `nbf`, `iat`
+- By default, ALL claims except `iss` and `jti` can be modified in `fuzz`/`malicious` modes, including `exp`, `nbf`, `iat`
+- Grammar mode selects from all grammar categories automatically for comprehensive testing
 - Use the `exclude` parameter to protect specific claims like `exp`, `nbf`, `iat` for infinitely valid tokens
-- Metadata fields (`kty`, `response_type`, `mode`, `exclude`) are automatically excluded from transformations
+- Metadata fields (`kty`, `response_type`, `mode`, `exclude`, `grammar_category`) are automatically excluded from transformations
 - Transformations apply to both access tokens and ID tokens when using hybrid flows
 
 ### JWT Header Fuzzing
@@ -986,6 +1285,12 @@ jwtforge token '{"kty":"EC","sub":"user123"}'
 
 # Generate token with fuzzing mode
 jwtforge token '{"mode":"fuzz","sub":"user123","email":"test@example.com"}'
+
+# Generate token with grammar mode (systematic security testing)
+jwtforge token '{"mode":"grammar","sub":"user123","scope":"openid profile"}'
+
+# Generate token with malicious payloads
+jwtforge token '{"mode":"malicious","sub":"user123","email":"test@example.com"}'
 
 # Stop the server
 jwtforge stop
