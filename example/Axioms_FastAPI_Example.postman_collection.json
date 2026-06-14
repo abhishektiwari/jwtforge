@@ -5,36 +5,7 @@
     "description": "Example FastAPI application demonstrating axioms-fastapi authentication and authorization patterns.\n\nTokens are automatically generated before each request using jwtforge.dev.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "variable": [
-    {
-      "key": "base_url",
-      "value": "http://localhost:8000",
-      "type": "string"
-    },
-    {
-      "key": "jwtforge_url",
-      "value": "http://localhost:8787",
-      "type": "string",
-      "description": "JWTforge.dev base URL"
-    },
-    {
-      "key": "issuer",
-      "value": "http://localhost:8787",
-      "type": "string",
-      "description": "Token issuer (must match AXIOMS_ISS_URL)"
-    },
-    {
-      "key": "audience",
-      "value": "http://localhost:8000",
-      "type": "string",
-      "description": "API audience claim (must match AXIOMS_AUDIENCE)"
-    },
-    {
-      "key": "access_token",
-      "value": "",
-      "type": "string"
-    }
-  ],
+  "variable": [],
   "item": [
     {
       "name": "1. Public Endpoints",
@@ -118,7 +89,7 @@
                 "exec": [
                   "// Generate token with basic claims (no scopes/roles/permissions)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -126,8 +97,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123'",
                   "        })",
                   "    }",
@@ -136,7 +107,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated successfully');",
                   "    }",
                   "});"
@@ -190,7 +161,7 @@
                 "exec": [
                   "// Generate token with user profile data",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -198,8 +169,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            email: 'user@example.com',",
                   "            name: 'Test User'",
@@ -210,7 +181,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with user profile');",
                   "    }",
                   "});"
@@ -304,7 +275,7 @@
                 "exec": [
                   "// Generate token with read:data scope",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -312,8 +283,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'read:data'",
                   "        })",
@@ -323,7 +294,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with scope: read:data');",
                   "    }",
                   "});"
@@ -378,7 +349,7 @@
                 "exec": [
                   "// Generate token with admin scope (alternative to read:data)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -386,8 +357,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'admin'",
                   "        })",
@@ -397,7 +368,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with scope: admin');",
                   "    }",
                   "});"
@@ -452,7 +423,7 @@
                 "exec": [
                   "// Generate token without required scope",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -460,8 +431,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'write:data'",
                   "        })",
@@ -471,7 +442,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with wrong scope');",
                   "    }",
                   "});"
@@ -526,7 +497,7 @@
                 "exec": [
                   "// Generate token with BOTH required scopes (AND logic)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -534,8 +505,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'write:data openid'",
                   "        })",
@@ -545,7 +516,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with scopes: write:data openid');",
                   "    }",
                   "});"
@@ -600,7 +571,7 @@
                 "exec": [
                   "// Generate token with only one of the required scopes",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -608,8 +579,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'write:data'",
                   "        })",
@@ -619,7 +590,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with only write:data scope');",
                   "    }",
                   "});"
@@ -679,7 +650,7 @@
                 "exec": [
                   "// Generate token with admin role",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -687,8 +658,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            roles: ['admin']",
                   "        })",
@@ -698,7 +669,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with role: admin');",
                   "    }",
                   "});"
@@ -753,7 +724,7 @@
                 "exec": [
                   "// Generate token with superuser role",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -761,8 +732,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            roles: ['superuser']",
                   "        })",
@@ -772,7 +743,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with role: superuser');",
                   "    }",
                   "});"
@@ -827,7 +798,7 @@
                 "exec": [
                   "// Generate token with wrong role",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -835,8 +806,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            roles: ['editor']",
                   "        })",
@@ -846,7 +817,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with wrong role');",
                   "    }",
                   "});"
@@ -901,7 +872,7 @@
                 "exec": [
                   "// Generate token with BOTH required roles (AND logic)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -909,8 +880,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            roles: ['admin', 'superuser']",
                   "        })",
@@ -920,7 +891,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with roles: admin, superuser');",
                   "    }",
                   "});"
@@ -976,7 +947,7 @@
                 "exec": [
                   "// Generate token with only one of the required roles",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -984,8 +955,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            roles: ['admin']",
                   "        })",
@@ -995,7 +966,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with only admin role');",
                   "    }",
                   "});"
@@ -1056,7 +1027,7 @@
                 "exec": [
                   "// Generate token with resource:create permission",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1064,8 +1035,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            permissions: ['resource:create']",
                   "        })",
@@ -1075,7 +1046,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with permission: resource:create');",
                   "    }",
                   "});"
@@ -1113,12 +1084,9 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Test Resource\",\n    \"type\": \"example\"\n}"
-            },
+            "body": null,
             "url": {
-              "raw": "{{base_url}}/api/resource",
+              "raw": "{{base_url}}/api/resource?name=Test Resource&type=example",
               "host": [
                 "{{base_url}}"
               ],
@@ -1139,7 +1107,7 @@
                 "exec": [
                   "// Generate token without required permission",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1147,8 +1115,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            permissions: ['resource:read']",
                   "        })",
@@ -1158,7 +1126,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with wrong permission');",
                   "    }",
                   "});"
@@ -1170,7 +1138,7 @@
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status code is 403', function () {",
+                  "pm.test(\"Status code is 403\", function () {",
                   "    pm.response.to.have.status(403);",
                   "});"
                 ],
@@ -1196,12 +1164,9 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"name\": \"Test Resource\",\n    \"type\": \"example\"\n}"
-            },
+            "body": null,
             "url": {
-              "raw": "{{base_url}}/api/resource",
+              "raw": "{{base_url}}/api/resource?name=Test Resource&type=wrong",
               "host": [
                 "{{base_url}}"
               ],
@@ -1210,7 +1175,7 @@
                 "resource"
               ]
             },
-            "description": "Should return 403 - missing required permission."
+            "description": "Should return 422 - missing required permission."
           }
         }
       ]
@@ -1227,7 +1192,7 @@
                 "exec": [
                   "// Generate token with all required claims (using openid scope)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1235,8 +1200,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'openid',",
                   "            roles: ['editor'],",
@@ -1248,7 +1213,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with all required claims (openid)');",
                   "    }",
                   "});"
@@ -1303,7 +1268,7 @@
                 "exec": [
                   "// Generate token with all required claims (using profile scope)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1311,8 +1276,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'profile',",
                   "            roles: ['editor'],",
@@ -1324,7 +1289,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated with all required claims (profile)');",
                   "    }",
                   "});"
@@ -1379,7 +1344,7 @@
                 "exec": [
                   "// Generate token without required scope (has role and permission)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1387,8 +1352,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'read:data',",
                   "            roles: ['editor'],",
@@ -1400,7 +1365,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated without required scope');",
                   "    }",
                   "});"
@@ -1455,7 +1420,7 @@
                 "exec": [
                   "// Generate token without required role (has scope and permission)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1463,8 +1428,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'openid',",
                   "            roles: ['admin'],",
@@ -1476,7 +1441,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated without required role');",
                   "    }",
                   "});"
@@ -1531,7 +1496,7 @@
                 "exec": [
                   "// Generate token without required permission (has scope and role)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1539,8 +1504,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123',",
                   "            scope: 'openid',",
                   "            roles: ['editor'],",
@@ -1552,7 +1517,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated without required permission');",
                   "    }",
                   "});"
@@ -1612,7 +1577,7 @@
                 "exec": [
                   "// Generate token for user123",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1620,8 +1585,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123'",
                   "        })",
                   "    }",
@@ -1630,7 +1595,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user123');",
                   "    }",
                   "});"
@@ -1684,7 +1649,7 @@
                 "exec": [
                   "// Generate token for user123",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1692,8 +1657,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123'",
                   "        })",
                   "    }",
@@ -1702,7 +1667,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user123');",
                   "    }",
                   "});"
@@ -1720,7 +1685,7 @@
                   "",
                   "// Save article ID for subsequent requests",
                   "const jsonData = pm.response.json();",
-                  "pm.collectionVariables.set('article_id', jsonData.article.id);"
+                  "pm.variables.set('article_id', jsonData.article.id);"
                 ],
                 "type": "text/javascript"
               }
@@ -1744,10 +1709,7 @@
                 "value": "application/json"
               }
             ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n    \"title\": \"My First Article\",\n    \"content\": \"This is the content of my article written by user123.\"\n}"
-            },
+            "body": null,
             "url": {
               "raw": "{{base_url}}/articles?title=My First Article&content=This is the content of my article written by user123.",
               "host": [
@@ -1779,7 +1741,7 @@
                 "exec": [
                   "// Generate token for user123 (article owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1787,8 +1749,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123'",
                   "        })",
                   "    }",
@@ -1797,7 +1759,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user123 (owner)');",
                   "    }",
                   "});"
@@ -1857,7 +1819,7 @@
                 "exec": [
                   "// Generate token for user456 (NOT the article owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1865,8 +1827,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user456'",
                   "        })",
                   "    }",
@@ -1875,7 +1837,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user456 (NOT owner)');",
                   "    }",
                   "});"
@@ -1935,7 +1897,7 @@
                 "exec": [
                   "// Generate token for user123 (article owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -1943,8 +1905,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123'",
                   "        })",
                   "    }",
@@ -1953,7 +1915,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user123 (owner)');",
                   "    }",
                   "});"
@@ -2019,7 +1981,7 @@
                 "exec": [
                   "// Generate token for user456 (NOT the article owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -2027,8 +1989,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user456'",
                   "        })",
                   "    }",
@@ -2037,7 +1999,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user456 (NOT owner)');",
                   "    }",
                   "});"
@@ -2103,7 +2065,7 @@
                 "exec": [
                   "// Generate token for user456",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -2111,8 +2073,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user456'",
                   "        })",
                   "    }",
@@ -2121,7 +2083,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user456');",
                   "    }",
                   "});"
@@ -2139,7 +2101,7 @@
                   "",
                   "// Save comment ID for subsequent requests",
                   "const jsonData = pm.response.json();",
-                  "pm.collectionVariables.set('comment_id', jsonData.comment.id);"
+                  "pm.variables.set('comment_id', jsonData.comment.id);"
                 ],
                 "type": "text/javascript"
               }
@@ -2192,7 +2154,7 @@
                 "exec": [
                   "// Generate token for user456 (comment owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -2200,8 +2162,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user456'",
                   "        })",
                   "    }",
@@ -2210,7 +2172,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user456 (comment owner)');",
                   "    }",
                   "});"
@@ -2276,7 +2238,7 @@
                 "exec": [
                   "// Generate token for user123 (NOT the comment owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -2284,8 +2246,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123'",
                   "        })",
                   "    }",
@@ -2294,7 +2256,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user123 (NOT comment owner)');",
                   "    }",
                   "});"
@@ -2360,7 +2322,7 @@
                 "exec": [
                   "// Generate token for user456 (comment owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -2368,8 +2330,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user456'",
                   "        })",
                   "    }",
@@ -2378,7 +2340,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user456 (comment owner)');",
                   "    }",
                   "});"
@@ -2433,7 +2395,7 @@
                 "exec": [
                   "// Generate token for user123 (article owner)",
                   "pm.sendRequest({",
-                  "    url: pm.collectionVariables.get('jwtforge_url') + '/token',",
+                  "    url: pm.variables.get('jwtforge_url') + '/token',",
                   "    method: 'POST',",
                   "    header: {",
                   "        'Content-Type': 'application/json'",
@@ -2441,8 +2403,8 @@
                   "    body: {",
                   "        mode: 'raw',",
                   "        raw: JSON.stringify({",
-                  "            iss: pm.collectionVariables.get('issuer'),",
-                  "            aud: pm.collectionVariables.get('audience'),",
+                  "            iss: pm.variables.get('issuer'),",
+                  "            aud: pm.variables.get('audience'),",
                   "            sub: 'user123'",
                   "        })",
                   "    }",
@@ -2451,7 +2413,7 @@
                   "        console.error('Token generation failed:', err);",
                   "    } else {",
                   "        const jsonData = response.json();",
-                  "        pm.collectionVariables.set('access_token', jsonData.access_token);",
+                  "        pm.variables.set('access_token', jsonData.access_token);",
                   "        console.log('Token generated for user123 (article owner)');",
                   "    }",
                   "});"

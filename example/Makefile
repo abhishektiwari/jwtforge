@@ -1,5 +1,6 @@
-.PHONY: help setup install run clean check
+.PHONY: help setup install run dev clean check
 .PHONY: db-upgrade db-downgrade db-current db-history db-revision db-reset
+.PHONY: newman test postman postman-install prod-check
 
 help:
 	@echo "=========================================="
@@ -24,7 +25,8 @@ help:
 	@echo "  make db-reset     - Reset database (WARNING: destroys data)"
 	@echo ""
 	@echo "Testing Commands:"
-	@echo "  make postman      - Run Postman collection tests via Newman CLI"
+	@echo "  make newman       - Run Postman collection tests via Newman CLI"
+	@echo "  make test         - Alias for make newman"
 	@echo "  make postman-install - Install Newman (Postman CLI)"
 	@echo ""
 	@echo "Utility Commands:"
@@ -73,9 +75,6 @@ install:
 run:
 	@echo "Starting FastAPI server..."
 	@echo "API available at: http://localhost:8000"
-	@echo "API documentation at: http://localhost:8000/docs"
-	@echo "Interactive docs at: http://localhost:8000/redoc"
-	@echo ""
 	uvicorn main:app --host 0.0.0.0 --port 8000
 
 dev:
@@ -84,12 +83,28 @@ dev:
 	@echo "API documentation at: http://localhost:8000/docs"
 	@echo "Interactive docs at: http://localhost:8000/redoc"
 	@echo ""
-	uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+	uvicorn main:app --host 0.0.0.0 --port 8000 --log-level debug --reload
 
 check:
 	@echo "Checking code..."
 	@python -m py_compile main.py
 	@echo "✓ No syntax errors found"
+
+newman:
+	@echo "Running Postman collection tests via Newman..."
+	npx newman run Axioms_FastAPI_Example.postman_collection.json \
+		-e Axioms_FastAPI_Example.postman_environment.json \
+		--delay-request 1000 \
+		--reporters cli,json \
+		--reporter-json-export test-results-axioms.json
+
+test: newman
+	@echo "✓ Tests complete. Results saved to test-results-axioms.json"
+
+postman-install:
+	@echo "Installing Newman (Postman CLI)..."
+	npm install -g newman
+	@echo "✓ Newman installed"
 
 clean:
 	@echo "Cleaning up generated files..."

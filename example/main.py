@@ -11,9 +11,14 @@ Test with:
 """
 
 import os
+import logging
 from typing import Optional
+import sys
+
+# Enable logging to see debug output
+logging.basicConfig(level=logging.DEBUG, stream=sys.stdout)
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException, Query, status
 from sqlmodel import Field, Session, SQLModel, create_engine, select
 from axioms_fastapi import (
     init_axioms,
@@ -98,13 +103,14 @@ app = FastAPI(
     version="1.0.0",
 )
 
+logger = logging.getLogger("uvicorn.error")
+
 # Initialize Axioms configuration from environment variables
 init_axioms(
     app,
     AXIOMS_AUDIENCE=os.getenv("AXIOMS_AUDIENCE", "https://api.example.com"),
     AXIOMS_ISS_URL=os.getenv("AXIOMS_ISS_URL"),
-    AXIOMS_JWKS_URL=os.getenv("AXIOMS_JWKS_URL"),
-    AXIOMS_DOMAIN=os.getenv("AXIOMS_DOMAIN"),
+    AXIOMS_JWKS_URL=os.getenv("AXIOMS_JWKS_URL")
 )
 
 # Register exception handler for Axioms errors
@@ -205,7 +211,7 @@ async def list_users(
 
 
 # Permission-protected endpoint
-@app.post("/api/resource")
+@app.post("/api/resource", status_code=201)
 async def create_resource(
     payload=Depends(require_auth),
     _=Depends(require_permissions(["resource:create"]))
@@ -267,7 +273,7 @@ async def write_data(
 
 
 # Role-protected with AND logic (via chaining)
-@app.delete("/admin/users/{user_id}")
+@app.delete("/admin/users/{user_id}", status_code=204)
 async def delete_user(
     user_id: int,
     payload=Depends(require_auth),
@@ -275,11 +281,7 @@ async def delete_user(
     __=Depends(require_roles(["superuser"]))  # AND requires superuser role
 ):
     """Endpoint requiring BOTH 'admin' AND 'superuser' roles."""
-    return {
-        "message": f"User {user_id} deleted successfully",
-        "deleted_by": payload.sub,
-        "user_roles": getattr(payload, "roles", []),
-    }
+    return None
 
 
 # ============================================================================
