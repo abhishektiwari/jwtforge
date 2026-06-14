@@ -12,7 +12,7 @@ Works on Cloudflare Workers Free Plan using Workers KV storage.
 ![Durable Objects](https://img.shields.io/badge/Storage-Durable%20Objects%20(Optional)-green.svg)
 ![Faker.js](https://img.shields.io/badge/Test%20Data-Faker.js-yellow.svg)
 ![BLNS](https://img.shields.io/badge/Fuzzing-BLNS-red.svg)
-
+ [![Citation Badge](https://api.juleskreuer.eu/citation-badge.php?doi=10.59350/6pdmd-3cm41)](https://juleskreuer.eu//projects/citation-badge)
 
 **Quick Start with CLI** locally or as part of CI/CD pipeline
 
