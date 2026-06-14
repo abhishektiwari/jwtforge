@@ -23,7 +23,7 @@ jobs:
       run: npm ci
 
     - name: Install wrangler
-      run: npm install -g @cloudflare/wrangler
+      run: npm install -g wrangler
 
     - name: Start JWTForge dev server
       run: npm run dev &
