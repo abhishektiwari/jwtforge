@@ -1,4 +1,4 @@
-.PHONY: help install dev deploy logs tail test test-unit test-integration test-coverage test-watch test-server clean
+.PHONY: help install dev deploy logs tail test test-unit test-integration test-coverage test-watch test-server test-e2e test-e2e-dev test-e2e-advanced clean
 
 # Default target
 help:
@@ -18,6 +18,8 @@ help:
 	@echo "  make test-watch    - Run tests in watch mode"
 	@echo "  make test-coverage - Generate coverage report"
 	@echo "  make test-server   - Run integration tests against local server (manual)"
+	@echo "  make test-e2e-dev  - Run Postman E2E tests with dev environment"
+	@echo "  make test-e2e-adv  - Run Postman advanced tests with dev environment"
 	@echo "  make test-prod     - Run tests against production server"
 	@echo ""
 	@echo "Maintenance:"
@@ -113,6 +115,32 @@ test-server:
 	@curl -s -X POST http://localhost:8787/token \
 		-H "Content-Type: application/json" \
 		-d '{"kty":"EC","sub":"test-user","name":"Test User"}' | jq '.' || curl -s -X POST http://localhost:8787/token -H "Content-Type: application/json" -d '{"kty":"EC","sub":"test-user"}'
+
+# Run Postman E2E tests with newman (basic collection + dev environment)
+test-e2e-dev:
+	@echo "Running Postman E2E tests (Basic Collection) with Dev environment..."
+	@echo ""
+	npx newman run tests/e2e/JWTForge-Collection.postman_collection.json \
+		-e tests/e2e/JWTForge-Environment-Dev.postman_environment.json \
+		--delay-request 5000 \
+		--reporters cli,json \
+		--reporter-json-export test-results-e2e-basic.json
+	@echo ""
+	@echo "✓ E2E tests completed (results: test-results-e2e-basic.json)"
+	@echo ""
+
+# Run Postman advanced E2E tests with newman (advanced collection + dev environment)
+test-e2e-adv:
+	@echo "Running Postman Advanced E2E tests (Advanced Collection) with Dev environment..."
+	@echo ""
+	npx newman run tests/e2e/JWTForge-Collection-Advanced.postman_collection.json \
+		-e tests/e2e/JWTForge-Environment-Dev.postman_environment.json \
+		--delay-request 5000 \
+		--reporters cli,json \
+		--reporter-json-export test-results-e2e-advanced.json
+	@echo ""
+	@echo "✓ Advanced E2E tests completed (results: test-results-e2e-advanced.json)"
+	@echo ""
 
 # Test production deployment
 test-prod:
