@@ -11,10 +11,31 @@
 export const headerGrammar = {
   // Algorithm field - includes valid algorithms and test cases
   alg: {
-    valid: ['HS256', 'HS384', 'HS512', 'RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'PS256', 'PS384', 'PS512'],
+    // JWS (signing) algorithms - RFC 7518
+    valid: [
+      // HMAC algorithms
+      'HS256', 'HS384', 'HS512',
+      // RSA algorithms
+      'RS256', 'RS384', 'RS512',
+      // ECDSA algorithms
+      'ES256', 'ES384', 'ES512', 'ES256K',
+      // RSA-PSS algorithms
+      'PS256', 'PS384', 'PS512',
+      // EdDSA algorithm
+      'EdDSA',
+    ],
+    // JWE (encryption) algorithms
+    encryption: [
+      'RSA-OAEP', 'RSA-OAEP-256',
+      'A128KW', 'A192KW', 'A256KW',
+      'dir',
+      'ECDH-ES', 'ECDH-ES+A128KW', 'ECDH-ES+A192KW', 'ECDH-ES+A256KW',
+      'A128GCMKW', 'A192GCMKW', 'A256GCMKW',
+      'PBES2-HS256+A128KW', 'PBES2-HS384+A192KW', 'PBES2-HS512+A256KW',
+    ],
     vulnerable: ['none', 'None', 'NONE', 'nOnE'],  // Algorithm confusion attacks
-    invalid: ['', 'invalid', 'RSA256', 'HMAC256', null],
-    typeVariations: ['RS256', 256, true, false, ['RS256'], { alg: 'RS256' }],
+    invalid: ['', 'invalid', 'RSA256', 'HMAC256', null, 'NONE256', 'HASH256'],
+    type_variations: ['RS256', 256, true, false, ['RS256'], { alg: 'RS256' }],
   },
 
   // Type field - token type identifier
@@ -58,43 +79,92 @@ export const headerGrammar = {
  * RFC 7519 standard registered claim names
  */
 export const standardClaimsGrammar = {
-  // Issuer - identifies the principal that issued the JWT
+  // Issuer - identifies the principal that issued the JWT (RFC 7519)
   iss: {
-    valid: ['https://example.com', 'https://auth.example.com', 'urn:example:issuer'],
-    edge_cases: ['', null, 'iss', 'http://localhost:3000'],
+    valid: [
+      'https://example.com',
+      'https://auth.example.com',
+      'urn:example:issuer',
+      'http://localhost:3000',
+      'https://accounts.google.com',
+    ],
+    edge_cases: [
+      '',
+      null,
+      'iss',
+      'localhost',
+      '127.0.0.1',
+      'file:///etc/passwd',
+    ],
     injection: [
       'iss"; "aud":"https://evil.com',
       'iss\r\nX-Injected: true',
       '"; "iss":"https://evil.com";"',
+      'https://evil.com/../legit.com',
     ],
     type_variations: ['https://example.com', 123, true, false, ['iss'], { iss: 'value' }],
   },
 
-  // Subject - identifies the principal that is the subject of the JWT
+  // Subject - identifies the principal that is the subject of the JWT (RFC 7519)
   sub: {
-    valid: ['user123', 'admin', '1234567890', 'user@example.com'],
-    edge_cases: ['', null, '0', 'root', 'admin', 'superuser'],
-    injection: ['sub"; "role":"admin', '1" OR "1"="1'],
+    valid: [
+      'user123',
+      'admin',
+      '1234567890',
+      'user@example.com',
+      'urn:uuid:550e8400-e29b-41d4-a716-446655440000',
+    ],
+    edge_cases: [
+      '',
+      null,
+      '0',
+      'root',
+      'admin',
+      'superuser',
+      'system',
+    ],
+    injection: [
+      'sub"; "role":"admin',
+      '1" OR "1"="1',
+      'user123\' OR 1=1--',
+    ],
     type_variations: ['user123', 123, true, false, ['user123'], { sub: 'user' }],
   },
 
-  // Audience - identifies the recipients the JWT is intended for
+  // Audience - identifies the recipients the JWT is intended for (RFC 7519)
   aud: {
-    single_string: ['api.example.com', 'web-app', 'https://example.com/api'],
-    array: [['api1', 'api2'], ['api'], []],
-    edge_cases: [null, '', 'aud'],
-    injection: ['api"; "admin":true', 'api\nInjected: true'],
+    single_string: [
+      'api.example.com',
+      'web-app',
+      'https://example.com/api',
+      'urn:my-app',
+    ],
+    array: [
+      ['api1', 'api2'],
+      ['api'],
+      ['https://api1.example.com', 'https://api2.example.com'],
+      [],
+    ],
+    edge_cases: [null, '', 'aud', 'localhost'],
+    injection: [
+      'api"; "admin":true',
+      'api\nInjected: true',
+      'api\r\nX-Forwarded-For: attacker.com',
+    ],
     type_variations: ['api', ['api'], 123, true, false, null, { aud: 'api' }],
   },
 
-  // Expiration Time - identifies expiration time on or after which the JWT is not accepted
+  // Expiration Time - identifies expiration time on or after which the JWT is not accepted (RFC 7519)
   exp: {
     valid: [
-      Math.floor(Date.now() / 1000) + 3600,  // 1 hour in future
-      Math.floor(Date.now() / 1000) + 86400, // 1 day in future
+      Math.floor(Date.now() / 1000) + 3600,      // 1 hour in future
+      Math.floor(Date.now() / 1000) + 86400,     // 1 day in future
+      Math.floor(Date.now() / 1000) + 604800,    // 1 week in future
+      Math.floor(Date.now() / 1000) + 2592000,   // 30 days in future
     ],
     edge_cases: [
       Math.floor(Date.now() / 1000) - 3600,  // 1 hour in past
+      Math.floor(Date.now() / 1000),         // Current time (expired)
       0,                                      // Epoch
       -1,                                     // Negative
       null,                                   // Missing expiration

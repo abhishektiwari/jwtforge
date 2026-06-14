@@ -149,6 +149,9 @@ export function getMaliciousCategories() {
 export function applyModeTransformations(claims, mode, exclude = []) {
   const modifiedClaims = { ...claims };
 
+  // Extract malicious category BEFORE removing metadata fields
+  const maliciousCategory = modifiedClaims.__maliciousCategory || null;
+
   // Metadata fields to remove from result
   const metadataFields = ['mode', 'exclude', '__maliciousCategory', 'malicious_category', 'grammar_category'];
   metadataFields.forEach(field => delete modifiedClaims[field]);
@@ -185,9 +188,8 @@ export function applyModeTransformations(claims, mode, exclude = []) {
         if (mode === 'fuzz') {
           modifiedClaims[key] = getFuzzedValue();
         } else {
-          // maliciousCategory is passed through claims object
-          const category = modifiedClaims.__maliciousCategory || null;
-          modifiedClaims[key] = getMaliciousValue(category);
+          // Use maliciousCategory extracted before metadata deletion
+          modifiedClaims[key] = getMaliciousValue(maliciousCategory);
         }
       });
     }

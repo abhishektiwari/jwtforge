@@ -166,6 +166,7 @@ test-prod:
 clean:
 	rm -rf node_modules
 	rm -rf .wrangler
+	rm -rf test-results-*.json
 	@echo "Cleaned node_modules and .wrangler directories"
 
 # Login to Cloudflare
