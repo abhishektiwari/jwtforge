@@ -27,7 +27,7 @@ Thumbs.db
 paper/
 paper
 .npmrc
-
+coverage/
 
 # Test results
 test-results*

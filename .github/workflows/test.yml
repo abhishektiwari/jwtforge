@@ -30,7 +30,7 @@ jobs:
       run: npm test -- --coverage
 
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         files: ./coverage/lcov.info
         flags: unittests
@@ -78,7 +78,7 @@ jobs:
 
     - name: Upload E2E test results
       if: always()
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: e2e-test-results
         path: test-results-*.json
