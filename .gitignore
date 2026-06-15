@@ -25,8 +25,6 @@ example.db
 *.swo
 *~
 
-paper/
-paper
 .npmrc
 coverage/
 
