@@ -29,7 +29,7 @@ tags:
 
 # Summary
 
-JWTForge is an open-source HTTP service that programmatically generates cryptographically signed JSON Web Tokens (JWT) for security testing, fuzzing, and integration testing of OAuth2 and OpenID Connect (OIDC) implementations. Deployed as a Cloudflare Worker, it returns signed tokens transformed by one of four testing modes: *compliant* (Faker-generated realistic OIDC tokens), *fuzz* (Big List of Naughty Strings and boundary values), *malicious* (injection payloads), and *grammar* (categorical RFC-derived patterns). It supports three generation approaches — JSON payload, OAuth2 client_credentials [@rfc6749], and RFC 8693 token exchange [@rfc8693] — and exposes OIDC infrastructure endpoints (RFC 7662 introspection [@rfc7662], JWKS [@rfc7517], discovery [@openid_connect_discovery]). By addressing token *generation* rather than *manipulation*, JWTForge enables reproducible token corpora for CI/CD integration testing, robustness evaluation, and vulnerability research.
+JWTForge is an open-source HTTP service that programmatically generates cryptographically signed JSON Web Tokens (JWT) for security testing, fuzzing, and integration testing of OAuth2 and OpenID Connect (OIDC) implementations. It can be run locally or deployed to Cloudflare Workers. JWTForge returns signed tokens transformed by one of four testing modes: *compliant* (Faker-generated realistic OIDC tokens), *fuzz* (Big List of Naughty Strings and boundary values), *malicious* (injection payloads), and *grammar* (categorical RFC-derived patterns). It supports three generation approaches — JSON payload, OAuth2 client_credentials [@rfc6749], and RFC 8693 token exchange [@rfc8693] — and exposes OIDC infrastructure endpoints (RFC 7662 introspection [@rfc7662], JWKS [@rfc7517], discovery [@openid_connect_discovery]). By addressing token *generation* rather than *manipulation*, JWTForge enables reproducible token corpora for CI/CD integration testing, robustness evaluation, and vulnerability research.
 
 # Statement of need
 
@@ -123,7 +123,7 @@ JWTForge enables several lines of research on authentication, authorization, and
 
 **Vulnerability discovery in OAuth2/OIDC implementations.** Research on JWT vulnerabilities — including key confusion [@xu2023jwtkey] and structural weaknesses [@zulkarneev2024json] — relies on adversarial token construction. JWTForge's malicious mode (ten injection categories) and `header_alg`/`header_kid` transformations operationalise these vectors as API parameters, lowering the marginal cost of constructing new attack variants.
 
-**Black-box measurement studies.** Large-scale automated measurement of authentication implementations [@osta2026automated] requires combining token mutation with original request context replay. JWTForge's RFC 8693 token exchange [@rfc8693] supports this directly: a captured token can be exchanged into a mutated variant while preserving the surrounding request context.
+**Black-box measurement studies.** Large-scale automated measurement of authentication implementations [@costa2026automated] requires combining token mutation with original request context replay. JWTForge's RFC 8693 token exchange [@rfc8693] supports this directly: a captured token can be exchanged into a mutated variant while preserving the surrounding request context.
 
 # Availability
 
