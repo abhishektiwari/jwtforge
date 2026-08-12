@@ -33,7 +33,12 @@ export const headerGrammar = {
       'A128GCMKW', 'A192GCMKW', 'A256GCMKW',
       'PBES2-HS256+A128KW', 'PBES2-HS384+A192KW', 'PBES2-HS512+A256KW',
     ],
-    vulnerable: ['none', 'None', 'NONE', 'nOnE'],  // Algorithm confusion attacks
+    vulnerable: [
+      { type: 'attack_string', value: 'none', tags: ['algorithm-confusion', 'unsigned'] },
+      { type: 'attack_string', value: 'None', tags: ['algorithm-confusion', 'case-bypass'] },
+      { type: 'attack_string', value: 'NONE', tags: ['algorithm-confusion', 'case-bypass'] },
+      { type: 'attack_string', value: 'nOnE', tags: ['algorithm-confusion', 'case-bypass'] },
+    ],
     invalid: ['', 'invalid', 'RSA256', 'HMAC256', null, 'NONE256', 'HASH256'],
     type_variations: ['RS256', 256, true, false, ['RS256'], { alg: 'RS256' }],
   },
@@ -48,15 +53,66 @@ export const headerGrammar = {
   // Key ID - identifies which key was used
   kid: {
     valid: ['key1', 'key2', 'my-rsa-key', 'ec-key-1'],
-    edge_cases: ['', null, 'key with spaces', 'key/with/slashes', '../../../etc/passwd'],
+    edge_cases: [
+      '',
+      null,
+      'key with spaces',
+      'key/with/slashes',
+      { type: 'attack_string', value: '../../../etc/passwd', tags: ['path-traversal'] },
+    ],
     type_variations: ['key1', 1, true, false, ['key1'], { kid: 'key1' }],
-    injection: ['key1"; alg="none', 'key1\r\nInjected: true', 'key1<script>'],
+    injection: [
+      { type: 'attack_string', value: 'key1"; alg="none', tags: ['header-injection', 'algorithm-confusion'] },
+      { type: 'attack_string', value: 'key1\r\nInjected: true', tags: ['crlf-injection'] },
+      { type: 'attack_string', value: 'key1<script>', tags: ['xss'] },
+    ],
   },
 
   // Content Type field
   cty: {
     valid: ['application/json', 'application/octet-stream', 'text/plain'],
     variations: ['application/json', '', null, 'text/html', 'application/json;charset=utf-8'],
+  },
+
+  // JWK Set URL - used for key lookup testing
+  jku: {
+    valid: [
+      { type: 'url', scheme: 'https', host: 'trusted', path: '/.well-known/jwks.json' },
+      { type: 'url', scheme: 'https', host: 'auth', path: '/keys' },
+    ],
+    edge_cases: [
+      '',
+      null,
+      { type: 'url', scheme: 'http', host: 'localhost', port: 8787, path: '/jwks.json' },
+      { type: 'literal', value: 'file:///etc/passwd', tags: ['local-file'] },
+    ],
+    injection: [
+      { type: 'url', scheme: 'https', host: 'attacker', path: '/.well-known/jwks.json', tags: ['jku-injection'] },
+      { type: 'literal', value: 'https://example.com/../attacker.example.com/jwks.json', tags: ['path-confusion'] },
+      { type: 'attack_string', value: 'https://example.com/jwks.json\r\nInjected: true', tags: ['crlf-injection'] },
+    ],
+    type_variations: ['https://example.com/jwks.json', 123, true, false, ['https://example.com/jwks.json'], { url: 'https://example.com/jwks.json' }],
+    vulnerable: [
+      { type: 'url', scheme: 'https', host: 'attacker', path: '/jwks.json', tags: ['jku-injection'] },
+      { type: 'url', scheme: 'http', host: 'metadata_service', path: '/latest/meta-data/iam/security-credentials/', tags: ['ssrf', 'metadata-service'] },
+    ],
+  },
+
+  // Embedded JWK - used for embedded key confusion testing
+  jwk: {
+    valid: [
+      { type: 'jwk', kty: 'RSA', kid: 'embedded-rsa-key', alg: 'RS256' },
+      { type: 'jwk', kty: 'EC', kid: 'embedded-ec-key', alg: 'ES256' },
+    ],
+    edge_cases: [null, {}, { kty: 'RSA' }, { type: 'jwk', kty: 'RSA', kid: '../../../etc/passwd' }],
+    injection: [
+      { type: 'jwk', kty: 'RSA', kid: 'key1\r\nInjected: true' },
+      { type: 'jwk', kty: 'RSA', kid: 'key1<script>' },
+    ],
+    type_variations: [{ kty: 'RSA' }, 'not-a-jwk', 123, true, false, [{ kty: 'RSA' }]],
+    vulnerable: [
+      { type: 'jwk', kty: 'RSA', kid: 'attacker-key', alg: 'HS256', n: 'attacker', tags: ['embedded-jwk', 'key-confusion'] },
+    ],
   },
 
   // Additional header fields that may appear
@@ -69,7 +125,6 @@ export const headerGrammar = {
     common: [
       { custom_field: 'value' },
       { jku: 'https://attacker.com/keys.json' },  // JWK Set URL injection
-      { x5u: 'https://attacker.com/cert.pem' },   // X.509 URL injection
     ],
   }
 };
@@ -157,14 +212,14 @@ export const standardClaimsGrammar = {
   // Expiration Time - identifies expiration time on or after which the JWT is not accepted (RFC 7519)
   exp: {
     valid: [
-      Math.floor(Date.now() / 1000) + 3600,      // 1 hour in future
-      Math.floor(Date.now() / 1000) + 86400,     // 1 day in future
-      Math.floor(Date.now() / 1000) + 604800,    // 1 week in future
-      Math.floor(Date.now() / 1000) + 2592000,   // 30 days in future
+      { type: 'timestamp', offsetSeconds: 3600 },      // 1 hour in future
+      { type: 'timestamp', offsetSeconds: 86400 },     // 1 day in future
+      { type: 'timestamp', offsetSeconds: 604800 },    // 1 week in future
+      { type: 'timestamp', offsetSeconds: 2592000 },   // 30 days in future
     ],
     edge_cases: [
-      Math.floor(Date.now() / 1000) - 3600,  // 1 hour in past
-      Math.floor(Date.now() / 1000),         // Current time (expired)
+      { type: 'timestamp', offsetSeconds: -3600 }, // 1 hour in past
+      { type: 'timestamp', offsetSeconds: 0 },     // Current time (expired)
       0,                                      // Epoch
       -1,                                     // Negative
       null,                                   // Missing expiration
@@ -175,11 +230,11 @@ export const standardClaimsGrammar = {
   // Not Before - identifies the time before which the JWT is not accepted
   nbf: {
     valid: [
-      Math.floor(Date.now() / 1000),         // Now
-      Math.floor(Date.now() / 1000) - 3600,  // 1 hour ago
+      { type: 'timestamp', offsetSeconds: 0 },      // Now
+      { type: 'timestamp', offsetSeconds: -3600 },  // 1 hour ago
     ],
     edge_cases: [
-      Math.floor(Date.now() / 1000) + 86400, // 1 day in future
+      { type: 'timestamp', offsetSeconds: 86400 }, // 1 day in future
       0,
       -1,
       null,
@@ -189,9 +244,9 @@ export const standardClaimsGrammar = {
 
   // Issued At - identifies the time at which the JWT was issued
   iat: {
-    valid: [Math.floor(Date.now() / 1000)],
+    valid: [{ type: 'timestamp', offsetSeconds: 0 }],
     edge_cases: [
-      Math.floor(Date.now() / 1000) + 86400, // Future issue time
+      { type: 'timestamp', offsetSeconds: 86400 }, // Future issue time
       0,
       -1,
       null,
@@ -201,7 +256,7 @@ export const standardClaimsGrammar = {
 
   // JWT ID - unique identifier for the JWT
   jti: {
-    valid: ['jti-123456', 'session-abc123', '550e8400-e29b-41d4-a716-446655440000'],
+    valid: ['jti-123456', 'session-abc123', { type: 'faker', kind: 'uuid' }],
     edge_cases: ['', null, 'jti', '0', 'jti' + '0'.repeat(1000)],
     injection: ['jti"; "admin":true', 'jti\r\nSet-Cookie: admin=true'],
   },
@@ -213,39 +268,39 @@ export const standardClaimsGrammar = {
  */
 export const oidcClaimsGrammar = {
   name: {
-    valid: ['John Doe', 'Jane Smith', 'Admin User'],
+    valid: [{ type: 'faker', kind: 'full_name' }, 'Admin User'],
     edge_cases: ['', null, 'A'.repeat(1000)],
     injection: ['<script>alert(1)</script>', 'O\'Reilly'],
   },
 
   email: {
-    valid: ['user@example.com', 'admin@example.com', 'test+tag@example.com'],
+    valid: [{ type: 'faker', kind: 'email' }, 'admin@example.com', 'test+tag@example.com'],
     edge_cases: ['', null, 'not-an-email', 'user@localhost'],
     injection: ['user@example.com\r\nBcc: attacker@evil.com', 'user"@example.com'],
   },
 
   email_verified: {
-    valid: [true, false],
+    valid: [{ type: 'faker', kind: 'boolean' }],
     edge_cases: [null, '', 'true', 'false', 1, 0],
   },
 
   given_name: {
-    valid: ['John', 'Jane', 'Admin'],
+    valid: [{ type: 'faker', kind: 'first_name' }, 'Admin'],
     edge_cases: ['', null, '0', ' '],
   },
 
   family_name: {
-    valid: ['Doe', 'Smith', 'User'],
+    valid: [{ type: 'faker', kind: 'last_name' }, 'User'],
     edge_cases: ['', null, '0'],
   },
 
   phone_number: {
-    valid: ['+1-201-555-0123', '(201) 555-0123', '2015550123'],
+    valid: [{ type: 'faker', kind: 'phone_number' }, '+1-201-555-0123', '2015550123'],
     edge_cases: ['', null, '0', 'not-a-phone', '+1' + '0'.repeat(100), '../../../etc/passwd'],
   },
 
   phone_number_verified: {
-    valid: [true, false],
+    valid: [{ type: 'faker', kind: 'boolean' }],
     edge_cases: [null, '', 'true', 'false', 1, 0],
   },
 
@@ -258,17 +313,17 @@ export const oidcClaimsGrammar = {
   },
 
   picture: {
-    valid: ['https://example.com/photo.jpg', 'https://example.com/profile.png'],
+    valid: [{ type: 'faker', kind: 'avatar' }, 'https://example.com/profile.png'],
     edge_cases: ['', null, 'javascript:alert(1)', '../../../etc/passwd'],
   },
 
   locale: {
-    valid: ['en-US', 'en', 'fr-FR', 'es'],
+    valid: [{ type: 'faker', kind: 'locale' }, 'en-US', 'fr-FR'],
     edge_cases: ['', null, 'invalid-locale', 'en_US'],
   },
 
   updated_at: {
-    valid: [Math.floor(Date.now() / 1000)],
+    valid: [{ type: 'timestamp', offsetSeconds: 0 }],
     edge_cases: [null, 0, -1, Infinity],
   },
 };
@@ -290,13 +345,13 @@ export const authClaimsGrammar = {
   },
 
   username: {
-    valid: ['john_doe', 'admin', 'user123'],
+    valid: [{ type: 'faker', kind: 'username' }, 'admin', 'user123'],
     edge_cases: ['', null, 'admin', 'root', 'superuser'],
     injection: ['admin" OR "1"="1', 'admin\r\nInjected: true'],
   },
 
   preferred_username: {
-    valid: ['john.doe', 'admin', 'user@example.com'],
+    valid: [{ type: 'faker', kind: 'username' }, 'admin', 'user@example.com'],
     edge_cases: ['', null, 'root', 'admin'],
   },
 
@@ -323,8 +378,8 @@ export const authClaimsGrammar = {
   },
 
   auth_time: {
-    valid: [Math.floor(Date.now() / 1000)],
-    edge_cases: [Math.floor(Date.now() / 1000) + 86400, 0, -1, null],
+    valid: [{ type: 'timestamp', offsetSeconds: 0 }],
+    edge_cases: [{ type: 'timestamp', offsetSeconds: 86400 }, 0, -1, null],
   },
 
   acr: {

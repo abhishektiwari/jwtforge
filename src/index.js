@@ -12,9 +12,12 @@ import { handleDiscoveryRequest } from './discovery.js';
 import { parseTokenExchangeRequest } from './tokenexchange.js';
 import { faker } from '@faker-js/faker';
 import { getCompleteGrammar } from './grammar.js';
+import { applyVulnerabilityPreset, normalizeTokenRequest, removeUndefinedFields } from './tokenrequest.js';
+import { setGrammarFaker } from './grammar-resolver.js';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
 const memoryCache = new Map();
+setGrammarFaker(faker);
 
 /**
  * Get or create key data from storage backend (KV, Durable Objects, or memory cache)
@@ -184,18 +187,19 @@ export function getDefaultClaimsFromScope(scope) {
  * Create and sign JWT token
  * @param {Object} claims - The claims for the JWT payload
  * @param {Object} keyData - The key data for signing
- * @param {Object} headerOverrides - Optional header field overrides (alg, kid)
- * @param {boolean} skipSignature - If true, returns token without signature (for CVE-2020-28042 testing)
+ * @param {Object} headerOverrides - Optional header field overrides
+ * @param {boolean|string|undefined} signatureOption - false for unsigned, string for literal signature, undefined to sign normally
  */
-async function createJWT(claims, keyData, headerOverrides = {}, skipSignature = false) {
+async function createJWT(claims, keyData, headerOverrides = {}, signatureOption = undefined) {
   const now = Math.floor(Date.now() / 1000);
 
   // JWT Header with optional overrides
-  const header = {
-    alg: headerOverrides.alg !== undefined ? headerOverrides.alg : keyData.alg,
+  const header = removeUndefinedFields({
+    alg: keyData.alg,
     typ: 'JWT',
-    kid: headerOverrides.kid !== undefined ? headerOverrides.kid : keyData.kid
-  };
+    kid: keyData.kid,
+    ...headerOverrides
+  });
 
   // JWT Payload with default OIDC/OAuth2 claims
   const payload = {
@@ -215,6 +219,11 @@ async function createJWT(claims, keyData, headerOverrides = {}, skipSignature = 
   delete payload.header_alg;
   delete payload.header_kid;
   delete payload.sig;
+  delete payload.header;
+  delete payload.body;
+  delete payload.signature;
+  delete payload.vulnerability;
+  delete payload.version;
 
   // Encode header and payload
   const encodedHeader = base64urlEncode(
@@ -226,9 +235,13 @@ async function createJWT(claims, keyData, headerOverrides = {}, skipSignature = 
 
   const signatureInput = `${encodedHeader}.${encodedPayload}`;
 
-  // If skipSignature is true, return unsigned JWT (for CVE-2020-28042 testing)
-  if (skipSignature) {
+  // If signature is false, return unsigned JWT (for CVE-2020-28042 testing)
+  if (signatureOption === false) {
     return `${signatureInput}.`;
+  }
+
+  if (typeof signatureOption === 'string') {
+    return `${signatureInput}.${signatureOption}`;
   }
 
   // Import private key for signing
@@ -466,20 +479,22 @@ async function handleTokenRequest(request, env) {
       );
     }
 
+    const normalized = normalizeTokenRequest(requestData);
+
     // Generate or use provided client_id
     if (!clientId) {
-      clientId = requestData.client_id || generateRandomClientId();
+      clientId = normalized.body.client_id || requestData.client_id || generateRandomClientId();
     }
-    requestData.client_id = clientId;
+    normalized.body.client_id = clientId;
 
     // Set issuer from request URL if not provided
-    if (!requestData.iss) {
-      requestData.iss = issuer;
+    if (!normalized.body.iss) {
+      normalized.body.iss = issuer;
     }
 
     // Extract response_type from request (OAuth2/OIDC standard)
     // Supported values: "token", "id_token", "id_token token", "token id_token"
-    const responseType = (requestData.response_type || 'token').toLowerCase().trim();
+    const responseType = (normalized.options.responseType || 'token').toLowerCase().trim();
 
     // Parse response_type to determine what tokens to generate
     const shouldGenerateAccessToken = responseType.includes('token') && !responseType.includes('id_token token') ||
@@ -489,59 +504,54 @@ async function handleTokenRequest(request, env) {
     const shouldGenerateIdToken = responseType.includes('id_token');
 
     // Extract kty from request, default to RSA/RS256
-    const kty = requestData.kty || 'RSA';
+    const kty = normalized.options.kty || 'RSA';
     const keyData = await getKeyData(env, kty);
+    applyVulnerabilityPreset(normalized, keyData);
 
     // Extract mode from request, default to 'fake'
     // Supported modes: 'fake' (default), 'fuzz', 'malicious', 'grammar'
-    const mode = requestData.mode || 'fake';
+    const mode = normalized.options.mode || 'fake';
 
     // Extract exclude list from request (claims to protect from fuzz/malicious modes)
-    const exclude = requestData.exclude || [];
+    const exclude = Array.isArray(normalized.options.exclude) ? normalized.options.exclude : [];
 
     // Extract malicious_category for malicious mode (e.g., sql_injection, xss, command_injection)
-    const maliciousCategory = requestData.malicious_category || null;
+    const maliciousCategory = normalized.options.maliciousCategory || null;
 
     // Extract grammar_category for grammar mode (e.g., valid, edge_cases, injection, vulnerable)
-    const grammarCategory = requestData.grammar_category || null;
-
-    // Extract sig parameter (defaults to true, when false generates unsigned tokens)
-    const skipSignature = requestData.sig === false;
+    const grammarCategory = normalized.options.grammarCategory || null;
 
     const response = {
       token_type: 'Bearer',
-      expires_in: requestData.exp ? (requestData.exp - Math.floor(Date.now() / 1000)) : 3600,
+      expires_in: normalized.body.exp ? (normalized.body.exp - Math.floor(Date.now() / 1000)) : 3600,
       algorithm: keyData.alg,
       key_id: keyData.kid
     };
 
     // Get default claims based on requested scopes (only for 'fake' mode)
-    const scopeDefaults = mode === 'fake' ? getDefaultClaimsFromScope(requestData.scope) : {};
+    const scopeDefaults = mode === 'fake' ? getDefaultClaimsFromScope(normalized.body.scope) : {};
 
     // Load grammar for grammar mode
     let headerOverrides = {};
+    const headerRequestData = {
+      ...normalized.body,
+      ...requestData,
+      header: normalized.header,
+      malicious_category: maliciousCategory
+    };
     if (mode === 'grammar') {
       const grammar = getCompleteGrammar();
-      headerOverrides = applyGrammarHeaderTransformations(requestData, grammar, exclude, grammarCategory);
+      headerOverrides = applyGrammarHeaderTransformations(headerRequestData, grammar, exclude, grammarCategory);
     } else {
       // Apply header transformations (for alg and kid) for fuzz/malicious modes
-      headerOverrides = applyHeaderTransformations(requestData, mode, exclude);
+      headerOverrides = applyHeaderTransformations(headerRequestData, mode, exclude);
     }
 
     // Generate access token
     if (shouldGenerateAccessToken) {
       let accessTokenClaims = {
         ...scopeDefaults,    // Default claims from scopes
-        ...requestData,      // User-provided claims (override defaults)
-        response_type: undefined, // Remove metadata
-        kty: undefined,
-        mode: undefined,
-        exclude: undefined,
-        grammar_category: undefined,
-        malicious_category: undefined,
-        header_alg: undefined,
-        header_kid: undefined,
-        sig: undefined
+        ...normalized.body   // User-provided claims (override defaults)
       };
 
       // Apply mode transformations (fuzz/malicious/grammar) with exclusions
@@ -557,7 +567,7 @@ async function handleTokenRequest(request, env) {
         accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
       }
 
-      const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, skipSignature);
+      const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, normalized.signature);
       response.access_token = accessToken;
     }
 
@@ -566,18 +576,9 @@ async function handleTokenRequest(request, env) {
       // ID tokens have specific OIDC requirements
       let idTokenClaims = {
         ...scopeDefaults,    // Default claims from scopes
-        ...requestData,      // User-provided claims (override defaults)
-        response_type: undefined, // Remove metadata
-        kty: undefined,
-        mode: undefined,
-        exclude: undefined,
-        grammar_category: undefined,
-        malicious_category: undefined,
-        header_alg: undefined,
-        header_kid: undefined,
-        sig: undefined,
+        ...normalized.body,  // User-provided claims (override defaults)
         // ID tokens should have nonce if provided
-        nonce: requestData.nonce,
+        nonce: normalized.body.nonce,
         // Add at_hash for hybrid flows if access token is present
         ...(shouldGenerateAccessToken && response.access_token ? { at_hash: 'placeholder' } : {})
       };
@@ -595,13 +596,13 @@ async function handleTokenRequest(request, env) {
         idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
       }
 
-      const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, skipSignature);
+      const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, normalized.signature);
       response.id_token = idToken;
     }
 
     // Include scope from request or default for hybrid flows
-    if (requestData.scope) {
-      response.scope = requestData.scope;
+    if (normalized.body.scope) {
+      response.scope = normalized.body.scope;
     } else if (shouldGenerateAccessToken && shouldGenerateIdToken) {
       response.scope = 'openid profile email';
     }

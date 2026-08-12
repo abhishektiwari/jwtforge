@@ -139,7 +139,29 @@ Visit the root URL of your deployed service to access the Swagger UI interface:
 ## Endpoints
 
 ### POST `/token`
-Generate a JWT token using JWTForge's custom implementation. Accepts a JSON body with key-value pairs representing any claims you want to include in the JWT token. For spec-compliant OAuth2 token generation, see the [OAuth2 Client Credentials Grant](#oauth2-client-credentials-grant) section.
+Generate a JWT token using JWTForge's custom implementation. Accepts either the structured JSON model (`header`, `body`, `signature`) or the legacy flat JSON model with claim fields at the top level. For spec-compliant OAuth2 token generation, see the [OAuth2 Client Credentials Grant](#oauth2-client-credentials-grant) section.
+
+Structured request:
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "header": {
+      "alg": "RS256",
+      "typ": "JWT",
+      "cty": "application/json",
+      "kid": "rsa-key-1",
+      "jku": "https://example.com/.well-known/jwks.json"
+    },
+    "body": {
+      "sub": "user123",
+      "name": "John Doe",
+      "roles": ["admin", "user"]
+    }
+  }'
+```
+
+Supported structured `header` fields are `alg`, `typ`, `cty`, `kid`, `jku`, and `jwk`. Certificate-chain header fields `x5u`, `x5c`, and `x5t` are intentionally rejected. Omit `signature` to sign normally, set `"signature": false` for an unsigned trailing-dot JWT, or pass a string to use that literal signature segment.
 
 Request:
 ```bash
@@ -692,6 +714,8 @@ curl -X POST https://your-worker.workers.dev/token \
 - Tests valid values, edge cases, type variations, and injection patterns
 - Ensures comprehensive security and spec compliance testing
 
+Grammar rules can contain either direct literal values or semantic templates. Templates describe intent such as "timestamp one hour from now", "attacker-controlled JWKS URL", "embedded RSA JWK", or "realistic email address"; JWTForge resolves them to concrete JWT values at generation time. Runtime grammar mode uses Faker for `faker` templates, which keeps realistic values fresh without hard-coding every emitted value.
+
 **Grammar Categories for Each Claim:**
 1. **Valid**: RFC-compliant values
    - `alg`: `HS256`, `RS256`, `ES256`, `PS256`, etc.
@@ -841,7 +865,25 @@ curl -X POST https://your-worker.workers.dev/token \
 
 Test JWT header vulnerabilities by fuzzing the `alg` and `kid` fields:
 
-Algorithm Confusion Attacks (manual override):
+Structured header override:
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "header": {
+      "alg": "none",
+      "typ": "JWT",
+      "kid": "test-key",
+      "jku": "https://attacker.example.com/jwks.json"
+    },
+    "body": {
+      "sub": "user123"
+    },
+    "signature": false
+  }'
+```
+
+Legacy algorithm confusion override:
 ```bash
 curl -X POST https://your-worker.workers.dev/token \
   -H "Content-Type: application/json" \
@@ -852,6 +894,21 @@ curl -X POST https://your-worker.workers.dev/token \
 ```
 
 **Result**: Creates a token with `"alg": "none"` in the header, testing for algorithm confusion vulnerabilities.
+
+Known vulnerability presets:
+```bash
+curl -X POST https://your-worker.workers.dev/token \
+  -H "Content-Type: application/json" \
+  -d '{
+    "vulnerability": "rs_hs_confusion",
+    "body": {
+      "sub": "user123",
+      "roles": ["admin"]
+    }
+  }'
+```
+
+Supported presets: `alg_none`, `rs_hs_confusion`, `kid_traversal`, `jku_injection`, and `embedded_jwk`.
 
 Automated Header Fuzzing (fuzz mode):
 ```bash
@@ -900,7 +957,7 @@ curl -X POST https://your-worker.workers.dev/token \
 - Test `kid` injection vulnerabilities (SQL, path traversal, XSS)
 - Test header parsing edge cases
 
-**Note**: `typ` field is not modifiable to maintain valid JWT structure.
+**Note**: New requests can use structured `header` fields `alg`, `typ`, `cty`, `kid`, `jku`, and `jwk`. The certificate header fields `x5u`, `x5c`, and `x5t` are rejected.
 
 ## OAuth2 Client Credentials Grant
 
@@ -1030,7 +1087,7 @@ The introspection endpoint validates:
 - **Token Format**: Valid JWT with 3 parts (header.payload.signature)
 - **Expiration**: Token not expired (`exp` > current time)
 - **Not Before**: Token activation time valid (`nbf` <= current time)
-- **Signature**: Valid signature using active keys from JWKS endpoint
+- **Signature**: Valid signature using active keys from JWKS endpoint, unless the token was intentionally generated unsigned or with a literal test signature
 - **Authorization**: Valid Basic auth credentials (password == client_id)
 
 ### Use Cases

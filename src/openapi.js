@@ -39,7 +39,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
         post: {
           tags: ['Token-Endpoint'],
           summary: 'Generate JWT Token',
-          description: 'Generate a signed JWT token with three approaches: (1) Direct JSON payload with custom claims, (2) OAuth2 client_credentials grant (RFC 6749, form-encoded with Basic auth), or (3) Token exchange (RFC 8693, form-encoded). Client ID is auto-generated if not provided. **Using Client Credentials from Swagger:** Click "Authorize" (top right), select basicAuth, enter the same value for both username and password (your client_id). Then select `application/x-www-form-urlencoded` content type and fill in the form fields.',
+          description: 'Generate a signed JWT token with four approaches: (1) Structured JSON payload using header/body/signature, (2) legacy direct JSON payload with flat custom claims, (3) OAuth2 client_credentials grant (RFC 6749, form-encoded with Basic auth), or (4) Token exchange (RFC 8693, form-encoded). Client ID is auto-generated if not provided. **Using Client Credentials from Swagger:** Click "Authorize" (top right), select basicAuth, enter the same value for both username and password (your client_id). Then select `application/x-www-form-urlencoded` content type and fill in the form fields.',
           requestBody: {
             required: true,
             content: {
@@ -61,9 +61,14 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     },
                     mode: {
                       type: 'string',
-                      enum: ['fake', 'fuzz', 'malicious', 'grammar'],
+                      enum: ['fake', 'fuzz', 'malicious', 'grammar', 'malcious', 'grammer'],
                       default: 'fake',
-                      description: 'Token generation mode: "fake" (realistic data with OIDC scopes), "fuzz" (random fuzzed values), "malicious" (security testing payloads), "grammar" (FBNF grammar-based patterns)'
+                      description: 'Token generation mode: "fake" (realistic data with OIDC scopes), "fuzz" (random fuzzed values), "malicious" (security testing payloads), "grammar" (FBNF grammar-based patterns). Misspelled aliases "malcious" and "grammer" are accepted and normalized.'
+                    },
+                    vulnerability: {
+                      type: 'string',
+                      enum: ['alg_none', 'rs_hs_confusion', 'kid_traversal', 'jku_injection', 'embedded_jwk'],
+                      description: 'Known JWT vulnerability preset. Applies to the structured header/signature model before mode transformations.'
                     },
                     malicious_category: {
                       type: 'string',
@@ -82,18 +87,43 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                       },
                       description: 'List of claim names to exclude from fuzz/malicious transformations (e.g., ["exp", "nbf", "iat"] to create infinitely valid tokens). Always protected: iss, jti'
                     },
+                    header: {
+                      type: 'object',
+                      description: 'Structured JWT header overrides. Supported fields: alg, typ, cty, kid, jku, jwk. Unsupported and rejected: x5u, x5c, x5t.',
+                      properties: {
+                        alg: { type: 'string', description: 'JWT algorithm header value' },
+                        typ: { type: 'string', description: 'JWT type header value' },
+                        cty: { type: 'string', description: 'JWT content type header value' },
+                        kid: { type: 'string', description: 'JWT key ID header value' },
+                        jku: { type: 'string', description: 'JWK Set URL header value' },
+                        jwk: { type: 'object', description: 'Embedded JWK header value' }
+                      },
+                      additionalProperties: false
+                    },
+                    body: {
+                      type: 'object',
+                      description: 'Structured JWT payload claims. Supports the same standard OIDC/OAuth2 and custom claims as the legacy flat JSON model.',
+                      additionalProperties: true
+                    },
+                    signature: {
+                      oneOf: [
+                        { type: 'boolean', enum: [false] },
+                        { type: 'string' }
+                      ],
+                      description: 'Structured signature control. Omit to sign normally, set false for an unsigned trailing-dot token, or provide a literal signature segment string.'
+                    },
                     header_alg: {
                       type: 'string',
-                      description: 'JWT header algorithm override. In fuzz mode, gets fuzzed to algorithm confusion attacks (none, None, HS256, etc.). Set to any value to enable header fuzzing in fuzz/malicious modes.'
+                      description: 'Legacy JWT header algorithm override. In fuzz mode, gets fuzzed to algorithm confusion attacks (none, None, HS256, etc.). Prefer structured header.alg for new requests.'
                     },
                     header_kid: {
                       type: 'string',
-                      description: 'JWT header key ID override. In fuzz/malicious modes, gets transformed to BLNS patterns or injection payloads. Set to any value to enable kid fuzzing.'
+                      description: 'Legacy JWT header key ID override. In fuzz/malicious modes, gets transformed to BLNS patterns or injection payloads. Prefer structured header.kid for new requests.'
                     },
                     sig: {
                       type: 'boolean',
                       default: true,
-                      description: 'Include signature in JWT. Set to false to generate unsigned tokens (for CVE-2020-28042 testing). When false, token ends with "." instead of a signature.'
+                      description: 'Legacy signature switch. Set to false to generate unsigned tokens. Prefer structured signature for new requests.'
                     },
                     iss: {
                       type: 'string',
@@ -179,8 +209,25 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                   additionalProperties: true
                 },
                 examples: {
+                  structured: {
+                    summary: 'Structured token request',
+                    value: {
+                      header: {
+                        alg: 'RS256',
+                        typ: 'JWT',
+                        cty: 'application/json',
+                        kid: 'rsa-key-1',
+                        jku: 'https://example.com/.well-known/jwks.json'
+                      },
+                      body: {
+                        sub: 'user123',
+                        scope: 'openid profile',
+                        roles: ['admin']
+                      }
+                    }
+                  },
                   accessToken: {
-                    summary: 'Access token (response_type=token)',
+                    summary: 'Legacy access token (response_type=token)',
                     value: {
                       response_type: 'token',
                       sub: 'user123',
@@ -286,25 +333,27 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     }
                   },
                   algConfusion: {
-                    summary: 'Algorithm confusion attack (header fuzzing)',
+                    summary: 'Structured algorithm confusion attack',
                     value: {
-                      mode: 'fuzz',
-                      sub: 'user123',
-                      name: 'Test User',
-                      header_alg: 'trigger-fuzz',
-                      header_kid: 'trigger-fuzz'
+                      vulnerability: 'rs_hs_confusion',
+                      body: {
+                        sub: 'user123',
+                        name: 'Test User'
+                      }
                     }
                   },
                   cve20152951: {
                     summary: 'alg=none signature bypass',
                     value: {
-                      sub: 'user123',
-                      roles: ['admin'],
-                      header_alg: 'none'
+                      vulnerability: 'alg_none',
+                      body: {
+                        sub: 'user123',
+                        roles: ['admin']
+                      }
                     }
                   },
                   cve201610555: {
-                    summary: 'RS/HS256 key confusion',
+                    summary: 'Legacy RS/HS256 key confusion',
                     value: {
                       sub: 'user123',
                       roles: ['admin'],
@@ -312,18 +361,22 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     }
                   },
                   cve20180114: {
-                    summary: 'Key injection (kid parameter)',
+                    summary: 'Structured key injection (kid parameter)',
                     value: {
-                      sub: 'user123',
-                      header_kid: '../../../../../../dev/null'
+                      vulnerability: 'kid_traversal',
+                      body: {
+                        sub: 'user123'
+                      }
                     }
                   },
                   cve202028042: {
-                    summary: 'Null signature',
+                    summary: 'Structured null signature',
                     value: {
-                      sub: 'user123',
-                      roles: ['admin'],
-                      sig: false
+                      body: {
+                        sub: 'user123',
+                        roles: ['admin']
+                      },
+                      signature: false
                     }
                   }
                 }
