@@ -1,6 +1,6 @@
 .PHONY: help setup install run dev clean check
 .PHONY: db-upgrade db-downgrade db-current db-history db-revision db-reset
-.PHONY: newman test postman postman-install prod-check
+.PHONY: newman newman-vuln test postman postman-install prod-check
 
 help:
 	@echo "=========================================="
@@ -26,6 +26,7 @@ help:
 	@echo ""
 	@echo "Testing Commands:"
 	@echo "  make newman       - Run Postman collection tests via Newman CLI"
+	@echo "  make newman-vuln  - Run JWT vulnerability Postman tests via Newman CLI"
 	@echo "  make test         - Alias for make newman"
 	@echo "  make postman-install - Install Newman (Postman CLI)"
 	@echo ""
@@ -97,6 +98,14 @@ newman:
 		--delay-request 1000 \
 		--reporters cli,json \
 		--reporter-json-export test-results-axioms.json
+
+newman-vuln:
+	@echo "Running JWT vulnerability Postman tests via Newman..."
+	npx newman run Axioms_FastAPI_JWT_Vulnerabilities.postman_collection.json \
+		-e Axioms_FastAPI_Example.postman_environment.json \
+		--delay-request 1000 \
+		--reporters cli,json \
+		--reporter-json-export test-results-axioms-jwt-vulnerabilities.json
 
 test: newman
 	@echo "✓ Tests complete. Results saved to test-results-axioms.json"

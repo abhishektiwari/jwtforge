@@ -71,6 +71,7 @@ make db-current      # Show current migration version
 make db-history      # Show migration history
 make db-revision     # Create new migration (requires msg="...")
 make db-reset        # Reset database (WARNING: destroys data)
+```
 
 ## Testing with Postman
 
@@ -84,6 +85,22 @@ The collection includes 7 folders with comprehensive tests:
 5. Permission-Based Authorization
 6. Mixed Authorization
 7. **Object-Level Ownership** (Articles and Comments with ownership checks)
+
+The example also includes `Axioms_FastAPI_JWT_Vulnerabilities.postman_collection.json`, a negative security test collection that uses JWTForge to generate known JWT attack tokens and verifies that the API rejects them.
+
+It covers:
+
+- Algorithm confusion: `alg: none`, `nOne`, and RS/HS substitution
+- Key injection: `kid` traversal, self-asserted `jku`, and embedded `jwk`
+- Malicious claim robustness: signed tokens with injection-style claim values
+
+Run it with Newman:
+
+```bash
+make newman-vuln
+```
+
+Expected secure behavior is `401` or `403` for forged JWTs. The baseline folder should pass first; if it does not, check `issuer`, `audience`, `base_url`, and `jwtforge_url` in the Postman environment.
 
 
 ## Common Issues

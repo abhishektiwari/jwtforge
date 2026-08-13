@@ -1,4 +1,4 @@
-.PHONY: help install dev docs docs-start docs-build docs-serve docs-clear deploy logs tail test test-unit test-feature test-all test-coverage test-watch test-server test-e2e-dev test-e2e-adv test-prod clean login info rollback
+.PHONY: help install dev docs docs-start docs-build docs-serve docs-clear deploy logs tail test test-unit test-feature test-all test-coverage test-watch test-server test-e2e-dev test-e2e-adv test-example-vuln test-prod clean login info rollback
 
 # Default target
 help:
@@ -24,6 +24,7 @@ help:
 	@echo "  make test-server   - Run integration tests against local server (manual)"
 	@echo "  make test-e2e-dev  - Run Postman E2E tests with dev environment"
 	@echo "  make test-e2e-adv  - Run Postman advanced tests with dev environment"
+	@echo "  make test-example-vuln - Run example JWT vulnerability Postman tests"
 	@echo "  make test-prod     - Run tests against production server"
 	@echo ""
 	@echo "Maintenance:"
@@ -163,6 +164,15 @@ test-e2e-adv:
 		--reporter-json-export test-results-e2e-advanced.json
 	@echo ""
 	@echo "✓ Advanced E2E tests completed (results: test-results-e2e-advanced.json)"
+	@echo ""
+
+# Run example JWT vulnerability tests with newman
+test-example-vuln:
+	@echo "Running example JWT vulnerability Postman tests..."
+	@echo ""
+	cd example && $(MAKE) newman-vuln
+	@echo ""
+	@echo "✓ Example JWT vulnerability tests completed"
 	@echo ""
 
 # Test production deployment

@@ -1,0 +1,674 @@
+{
+  "info": {
+    "_postman_id": "axioms-fastapi-jwt-vulnerabilities-001",
+    "name": "Axioms FastAPI JWT Vulnerability Tests",
+    "description": "Postman collection for testing common JWT validation vulnerabilities against the Axioms FastAPI example API. JWTForge generates the test tokens; the target API should reject forged or unsafe tokens with 401 or 403.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseline_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "attack_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Baseline",
+      "description": "Verify the example API accepts a normal signed JWT before running negative tests.",
+      "item": [
+        {
+          "name": "Generate Baseline Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned a baseline access token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('baseline_token', jsonData.access_token);",
+                  "});",
+                  "",
+                  "pm.test('Baseline token has JWT format', function () {",
+                  "    const token = pm.collectionVariables.get('baseline_token');",
+                  "    pm.expect(token.split('.')).to.have.length(3);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"header\": {\n    \"typ\": \"JWT\"\n  },\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"security-test-user\",\n    \"scope\": \"read:data openid\",\n    \"roles\": [\"admin\", \"superuser\"],\n    \"permissions\": [\"resource:create\"]\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a normal signed token with claims accepted by the protected example endpoints."
+          }
+        },
+        {
+          "name": "Protected Endpoint Accepts Baseline Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Baseline token is accepted', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{baseline_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "Sanity check: if this fails, fix JWTForge issuer/audience configuration before interpreting vulnerability tests."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Algorithm Confusion",
+      "description": "Tokens with unsafe or unexpected JWT algorithms must be rejected.",
+      "item": [
+        {
+          "name": "Generate alg none Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned alg none token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vulnerability\": \"alg_none\",\n  \"header\": {\n    \"alg\": \"none\",\n    \"typ\": \"JWT\"\n  },\n  \"signature\": false,\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate an unsigned JWT with header alg=none."
+          }
+        },
+        {
+          "name": "Reject alg none Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects alg none token', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "A secure API must not accept unsigned alg=none tokens."
+          }
+        },
+        {
+          "name": "Generate alg none Case Variant Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned alg none variant token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vulnerability\": \"alg_none\",\n  \"alg_none_variant\": \"nOne\",\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate an alg=none case variant. Validators should not normalize this into an allowed algorithm."
+          }
+        },
+        {
+          "name": "Reject alg none Case Variant Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects alg none case variant token', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "A secure API must reject case variants such as nOne, None, and NONE."
+          }
+        },
+        {
+          "name": "Generate RS/HS Confusion Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned RS/HS confusion token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vulnerability\": \"rs_hs_confusion\",\n  \"header\": {\n    \"typ\": \"JWT\",\n    \"kid\": \"rsa-key-1\"\n  },\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a token with HS256 substituted for the expected asymmetric algorithm."
+          }
+        },
+        {
+          "name": "Reject RS/HS Confusion Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects RS/HS confusion token', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "A secure API must enforce an algorithm allowlist and reject HS substitution."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Key Injection",
+      "description": "Tokens that self-assert key location or key material must be rejected unless explicitly trusted by the verifier.",
+      "item": [
+        {
+          "name": "Generate KID Traversal Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned kid traversal token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vulnerability\": \"kid_traversal\",\n  \"header\": {\n    \"typ\": \"JWT\",\n    \"kid\": \"../../../../../../dev/null\"\n  },\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a token whose kid header attempts filesystem/path traversal."
+          }
+        },
+        {
+          "name": "Reject KID Traversal Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects kid traversal token', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": "A secure API must not use untrusted kid values for filesystem key lookup."
+          }
+        },
+        {
+          "name": "Generate JKU Injection Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned jku injection token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vulnerability\": \"jku_injection\",\n  \"header\": {\n    \"typ\": \"JWT\",\n    \"jku\": \"https://attacker.example.com/.well-known/jwks.json\"\n  },\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a token with a self-asserted attacker-controlled jku header."
+          }
+        },
+        {
+          "name": "Handle JKU Injection Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target ignores or rejects self-asserted jku token', function () {",
+                  "    pm.expect([200, 401, 403]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Target does not server-error on jku header', function () {",
+                  "    pm.expect(pm.response.code).to.not.be.within(500, 599);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": "A secure API should ignore untrusted jku values or reject the token. A 200 response is acceptable only when the verifier used its configured trusted keys rather than the token-provided jku."
+          }
+        },
+        {
+          "name": "Generate Embedded JWK Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned embedded jwk token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vulnerability\": \"embedded_jwk\",\n  \"header\": {\n    \"typ\": \"JWT\"\n  },\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a token with public key material embedded in the jwk header."
+          }
+        },
+        {
+          "name": "Handle Embedded JWK Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target ignores or rejects embedded jwk token', function () {",
+                  "    pm.expect([200, 401, 403]).to.include(pm.response.code);",
+                  "});",
+                  "",
+                  "pm.test('Target does not server-error on embedded jwk header', function () {",
+                  "    pm.expect(pm.response.code).to.not.be.within(500, 599);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "admin",
+                "users"
+              ]
+            },
+            "description": "A secure API should ignore embedded jwk values or reject the token. A 200 response is acceptable only when the verifier used its configured trusted keys rather than key material supplied inside the token header."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Claim Injection Robustness",
+      "description": "Signed tokens with malicious claim values should not trigger server errors or injection behavior.",
+      "item": [
+        {
+          "name": "Generate SQL Injection Claim Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned malicious-claim token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"malicious\",\n  \"malicious_category\": \"sql_injection\",\n  \"header\": {\n    \"typ\": \"JWT\"\n  },\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"security-test-user\",\n    \"email\": \"test@example.com\",\n    \"name\": \"Test User\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a validly signed token whose claim values are transformed by JWTForge malicious mode."
+          }
+        },
+        {
+          "name": "Profile Endpoint Handles Malicious Claims",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target does not produce a server error', function () {",
+                  "    pm.expect(pm.response.code).to.not.be.within(500, 599);",
+                  "});",
+                  "",
+                  "pm.test('Target either rejects token or handles claims normally', function () {",
+                  "    pm.expect([200, 401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "me"
+              ]
+            },
+            "description": "A validly signed token with malicious claim values should not cause 5xx errors."
+          }
+        }
+      ]
+    }
+  ]
+}
