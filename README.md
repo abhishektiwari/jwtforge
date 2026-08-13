@@ -27,6 +27,8 @@ A lightweight JWT token vending service for testing purposes, deployable on Clou
 
 ## Quick Start
 
+JWTForge requires Node.js 22 or newer.
+
 Install the CLI:
 
 ```bash

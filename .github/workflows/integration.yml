@@ -16,7 +16,7 @@ jobs:
     - name: Set up Node.js for JWTForge
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
+        node-version: 22.x
         cache: 'npm'
 
     - name: Install JWTForge dependencies
