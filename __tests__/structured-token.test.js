@@ -2,7 +2,7 @@
  * Tests for structured token request normalization.
  */
 
-import { applyVulnerabilityPreset, normalizeTokenRequest, removeUndefinedFields } from '../src/tokenrequest.js';
+import { applyVulnerabilityPreset, buildJwtHeader, normalizeTokenRequest, parseResponseType, removeUndefinedFields } from '../src/tokenrequest.js';
 
 describe('Structured token request normalization', () => {
   test('legacy flat payload maps to body claims', () => {
@@ -70,9 +70,37 @@ describe('Structured token request normalization', () => {
     expect(() => normalizeTokenRequest({ body: 'not-object' })).toThrow('body must be an object');
   });
 
-  test('rejects unknown header fields', () => {
+  test('supports crit with self-asserted critical header parameters', () => {
+    const normalized = normalizeTokenRequest({
+      header: {
+        typ: 'JWT',
+        crit: ['exp-ext', 'custom-policy-id'],
+        'exp-ext': '2026-12-31T23:59:59Z',
+        'custom-policy-id': 'policy_99ab'
+      },
+      body: { sub: 'user123' }
+    });
+
+    expect(normalized.header.crit).toEqual(['exp-ext', 'custom-policy-id']);
+    expect(normalized.header['exp-ext']).toBe('2026-12-31T23:59:59Z');
+    expect(normalized.header['custom-policy-id']).toBe('policy_99ab');
+  });
+
+  test('rejects invalid crit definitions', () => {
     expect(() => normalizeTokenRequest({
       header: { crit: ['exp'] },
+      body: { sub: 'user123' }
+    })).toThrow('Missing critical JWT header field');
+
+    expect(() => normalizeTokenRequest({
+      header: { crit: 'exp-ext', 'exp-ext': '2026-12-31T23:59:59Z' },
+      body: { sub: 'user123' }
+    })).toThrow('crit must be an array of header parameter names');
+  });
+
+  test('rejects unknown header fields not listed in crit', () => {
+    expect(() => normalizeTokenRequest({
+      header: { custom: 'value' },
       body: { sub: 'user123' }
     })).toThrow('Unsupported JWT header field');
   });
@@ -120,6 +148,33 @@ describe('Structured token request normalization', () => {
   });
 });
 
+describe('Response type parsing', () => {
+  test('token generates only an access token', () => {
+    expect(parseResponseType('token')).toEqual({
+      shouldGenerateAccessToken: true,
+      shouldGenerateIdToken: false
+    });
+  });
+
+  test('id_token generates only an ID token', () => {
+    expect(parseResponseType('id_token')).toEqual({
+      shouldGenerateAccessToken: false,
+      shouldGenerateIdToken: true
+    });
+  });
+
+  test('hybrid response types generate both token types', () => {
+    expect(parseResponseType('id_token token')).toEqual({
+      shouldGenerateAccessToken: true,
+      shouldGenerateIdToken: true
+    });
+    expect(parseResponseType('token id_token')).toEqual({
+      shouldGenerateAccessToken: true,
+      shouldGenerateIdToken: true
+    });
+  });
+});
+
 describe('Structured vulnerability presets', () => {
   test('alg_none sets alg none and disables signature', () => {
     const normalized = normalizeTokenRequest({
@@ -161,6 +216,32 @@ describe('Structured vulnerability presets', () => {
 
     expect(normalized.header.alg).toBe('nOnE');
     expect(normalized.signature).toBe(false);
+  });
+
+  test('alg_none overrides non-none structured header algorithm by default', () => {
+    const normalized = normalizeTokenRequest({
+      vulnerability: 'alg_none',
+      header: { alg: 'RS256', typ: 'JWT' },
+      body: { sub: 'admin' }
+    });
+
+    applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } });
+
+    expect(normalized.header.alg).toBe('none');
+    expect(normalized.signature).toBe(false);
+  });
+
+  test('alg_none preserves explicit literal signature', () => {
+    const normalized = normalizeTokenRequest({
+      vulnerability: 'alg_none',
+      signature: 'literal-signature',
+      body: { sub: 'admin' }
+    });
+
+    applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } });
+
+    expect(normalized.header.alg).toBe('none');
+    expect(normalized.signature).toBe('literal-signature');
   });
 
   test('alg_none rejects non-none variants', () => {
@@ -214,6 +295,33 @@ describe('Structured vulnerability presets', () => {
     expect(jkuInjection.header.jku).toBe('https://attacker.example.com/.well-known/jwks.json');
   });
 
+  test('header injection presets preserve explicit structured header values', () => {
+    const jwk = { kty: 'RSA', kid: 'self-asserted' };
+    const kidTraversal = normalizeTokenRequest({
+      vulnerability: 'kid_traversal',
+      header: { kid: '../../../tmp/key.pem' },
+      body: { sub: 'admin' }
+    });
+    const jkuInjection = normalizeTokenRequest({
+      vulnerability: 'jku_injection',
+      header: { jku: 'https://self.example.com/jwks.json' },
+      body: { sub: 'admin' }
+    });
+    const embeddedJwk = normalizeTokenRequest({
+      vulnerability: 'embedded_jwk',
+      header: { jwk },
+      body: { sub: 'admin' }
+    });
+
+    applyVulnerabilityPreset(kidTraversal, { publicKey: { kid: 'public' } });
+    applyVulnerabilityPreset(jkuInjection, { publicKey: { kid: 'public' } });
+    applyVulnerabilityPreset(embeddedJwk, { publicKey: { kid: 'public' } });
+
+    expect(kidTraversal.header.kid).toBe('../../../tmp/key.pem');
+    expect(jkuInjection.header.jku).toBe('https://self.example.com/jwks.json');
+    expect(embeddedJwk.header.jwk).toBe(jwk);
+  });
+
   test('no vulnerability preset returns normalized request unchanged', () => {
     const normalized = normalizeTokenRequest({ body: { sub: 'user123' } });
 
@@ -228,5 +336,27 @@ describe('Structured vulnerability presets', () => {
 
     expect(() => applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } }))
       .toThrow('Unsupported vulnerability mode');
+  });
+});
+
+describe('Generated JWT header defaults', () => {
+  test('defaults typ and omits cty when omitted', () => {
+    const header = buildJwtHeader({ alg: 'RS256', kid: 'rsa-key-1' });
+
+    expect(header.typ).toBe('JWT');
+    expect(header.cty).toBeUndefined();
+  });
+
+  test('allows self-asserted typ and cty overrides', () => {
+    const header = buildJwtHeader(
+      { alg: 'RS256', kid: 'rsa-key-1' },
+      {
+          typ: 'at+jwt',
+          cty: 'application/jwt'
+      }
+    );
+
+    expect(header.typ).toBe('at+jwt');
+    expect(header.cty).toBe('application/jwt');
   });
 });

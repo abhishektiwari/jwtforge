@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import CodeBlock from '@theme/CodeBlock';
 import styles from './styles.module.css';
 
 function getApiBaseUrl(configuredApiBaseUrl) {
@@ -24,6 +25,18 @@ function getApiBaseUrl(configuredApiBaseUrl) {
 
 function prettyJson(value) {
   return JSON.stringify(value, null, 2);
+}
+
+function JsonOutput({ value, emptyText }) {
+  if (!value) {
+    return <pre className={styles.emptyOutput}>{emptyText}</pre>;
+  }
+
+  return (
+    <CodeBlock language="json" className={styles.codeBlock}>
+      {prettyJson(value)}
+    </CodeBlock>
+  );
 }
 
 function decodeJwtPart(value) {
@@ -119,16 +132,16 @@ export default function DocsTokenExample({ request }) {
       <div className={styles.grid}>
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Request</div>
-          <pre>{prettyJson(request)}</pre>
+          <JsonOutput value={request} emptyText="No request" />
         </div>
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Response</div>
-          <pre>{response ? prettyJson(response) : 'No response yet'}</pre>
+          <JsonOutput value={response} emptyText="No response yet" />
         </div>
       </div>
       <div className={styles.decodedPanel}>
         <div className={styles.panelHeader}>Decoded token</div>
-        <pre>{decodedOutput ? prettyJson(decodedOutput) : 'No token yet'}</pre>
+        <JsonOutput value={decodedOutput} emptyText="No token yet" />
       </div>
       {error && <div className={styles.error}>{error}</div>}
     </div>

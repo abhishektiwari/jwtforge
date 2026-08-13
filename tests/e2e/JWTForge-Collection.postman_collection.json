@@ -161,9 +161,9 @@
                   "exec": [
                     "if (pm.response.code === 200) {",
                     "    var jsonData = pm.response.json();",
-                    "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                    "    pm.environment.set(\"jwt_token\", jsonData.id_token);",
                     "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
-                    "        pm.expect(jsonData.access_token).to.exist;",
+                    "        pm.expect(jsonData.id_token).to.exist;",
                     "    });",
                     "}"
                   ],
@@ -180,9 +180,9 @@
                 "exec": [
                   "if (pm.response.code === 200) {",
                   "    var jsonData = pm.response.json();",
-                  "    pm.environment.set(\"jwt_token\", jsonData.access_token);",
+                  "    pm.environment.set(\"jwt_token\", jsonData.id_token);",
                   "    pm.test(\"✓ Token saved to {{jwt_token}}\", function() {",
-                  "        pm.expect(jsonData.access_token).to.exist;",
+                  "        pm.expect(jsonData.id_token).to.exist;",
                   "    });",
                   "}"
                 ],

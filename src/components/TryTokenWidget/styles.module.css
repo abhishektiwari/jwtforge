@@ -47,6 +47,48 @@
   line-height: 1.45;
 }
 
+.editor:only-child {
+  grid-column: 1 / -1;
+}
+
+.splitEditor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.editorPane,
+.previewPane {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ifm-color-emphasis-700);
+}
+
+.editorPane textarea,
+.previewCode {
+  min-height: 260px;
+  max-height: 420px;
+  margin: 0;
+  padding: 0.75rem;
+  overflow: auto;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 6px;
+  background: var(--ifm-background-color) !important;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  font-weight: 400;
+  line-height: 1.45;
+  tab-size: 2;
+  white-space: pre;
+}
+
+.editorPane textarea {
+  resize: vertical;
+}
+
 .actions {
   display: flex;
   gap: 0.75rem;
@@ -103,7 +145,7 @@
 
 .outputGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
   gap: 0.75rem;
   margin-top: 0.9rem;
 }
@@ -136,9 +178,25 @@
   word-break: break-word;
 }
 
+.panel .codeBlock {
+  margin: 0;
+  border-radius: 0;
+}
+
+.panel .codeBlock pre {
+  min-height: 150px;
+  max-height: 280px;
+  margin: 0;
+}
+
+.emptyOutput {
+  color: var(--ifm-color-emphasis-700);
+}
+
 @media (max-width: 996px) {
   .controls,
   .editors,
+  .splitEditor,
   .outputGrid {
     grid-template-columns: 1fr;
   }

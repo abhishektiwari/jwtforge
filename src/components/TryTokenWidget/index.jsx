@@ -1,27 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import CodeBlock from '@theme/CodeBlock';
+import { Highlight, themes } from 'prism-react-renderer';
+import { tokenExampleGroups, tokenExampleOptions } from '../../token-examples.js';
 import styles from './styles.module.css';
-
-const defaultStructuredClaims = {
-  sub: 'user123',
-  scope: 'openid profile email',
-  roles: ['admin', 'user'],
-};
-
-const defaultHeader = {
-  alg: 'RS256',
-  typ: 'JWT',
-  kid: 'rsa-key-1',
-};
-
-const vulnerabilityPresets = [
-  '',
-  'alg_none',
-  'rs_hs_confusion',
-  'kid_traversal',
-  'jku_injection',
-  'embedded_jwk',
-];
 
 function getApiBaseUrl(configuredApiBaseUrl) {
   if (typeof configuredApiBaseUrl === 'string' && configuredApiBaseUrl) {
@@ -43,7 +25,7 @@ function getApiBaseUrl(configuredApiBaseUrl) {
   return window.location.origin;
 }
 
-function safeJsonParse(value, fallback) {
+function safeJsonParse(value, fallback = null) {
   try {
     return JSON.parse(value);
   } catch {
@@ -53,6 +35,49 @@ function safeJsonParse(value, fallback) {
 
 function prettyJson(value) {
   return JSON.stringify(value, null, 2);
+}
+
+function JsonOutput({ value, emptyText }) {
+  if (!value) {
+    return <pre className={styles.emptyOutput}>{emptyText}</pre>;
+  }
+
+  return (
+    <CodeBlock language="json" className={styles.codeBlock}>
+      {prettyJson(value)}
+    </CodeBlock>
+  );
+}
+
+function HighlightedJsonEditor({ value, onChange }) {
+  return (
+    <div className={styles.splitEditor}>
+      <label className={styles.editorPane}>
+        <span>Input</span>
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          spellCheck="false"
+        />
+      </label>
+      <div className={styles.previewPane}>
+        <span>Preview</span>
+        <Highlight theme={themes.github} code={value || ' '} language="json">
+          {({ className, style, tokens, getLineProps, getTokenProps }) => (
+            <pre className={`${className} ${styles.previewCode}`} style={style}>
+              {tokens.map((line, index) => (
+                <div key={index} {...getLineProps({ line })}>
+                  {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token })} />
+                  ))}
+                </div>
+              ))}
+            </pre>
+          )}
+        </Highlight>
+      </div>
+    </div>
+  );
 }
 
 function decodeJwtPart(value) {
@@ -81,50 +106,18 @@ function decodeJwt(token) {
   };
 }
 
-function buildPayload({ mode, vulnerability, headerJson, bodyJson, signatureMode, literalSignature }) {
-  const header = safeJsonParse(headerJson, defaultHeader);
-  const body = safeJsonParse(bodyJson, defaultStructuredClaims);
-
-  const payload = {
-    mode,
-    header,
-    body,
-  };
-
-  if (vulnerability) {
-    payload.vulnerability = vulnerability;
-  }
-  if (signatureMode === 'unsigned') {
-    payload.signature = false;
-  } else if (signatureMode === 'literal') {
-    payload.signature = literalSignature;
-  }
-
-  return payload;
-}
+const initialExample = tokenExampleOptions[0];
 
 export default function TryTokenWidget() {
   const { siteConfig } = useDocusaurusContext();
   const configuredApiBaseUrl = siteConfig.customFields?.jwtforgeApiBaseUrl;
-  const [mode, setMode] = useState('fake');
-  const [vulnerability, setVulnerability] = useState('');
-  const [signatureMode, setSignatureMode] = useState('normal');
-  const [literalSignature, setLiteralSignature] = useState('literal-signature');
-  const [headerJson, setHeaderJson] = useState(prettyJson(defaultHeader));
-  const [bodyJson, setBodyJson] = useState(prettyJson(defaultStructuredClaims));
+  const [selectedExample, setSelectedExample] = useState(initialExample.key);
+  const [requestJson, setRequestJson] = useState(prettyJson(initialExample.value));
   const [response, setResponse] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const payload = useMemo(() => buildPayload({
-    mode,
-    vulnerability,
-    headerJson,
-    bodyJson,
-    signatureMode,
-    literalSignature,
-  }), [mode, vulnerability, headerJson, bodyJson, signatureMode, literalSignature]);
-
+  const parsedRequest = useMemo(() => safeJsonParse(requestJson), [requestJson]);
   const token = response?.access_token || response?.id_token || '';
   const decoded = useMemo(() => decodeJwt(token), [token]);
   const baseUrl = useMemo(
@@ -134,18 +127,32 @@ export default function TryTokenWidget() {
   const endpoint = `${baseUrl.replace(/\/$/, '')}/token`;
   const curl = `curl -X POST ${endpoint} \\
   -H "Content-Type: application/json" \\
-  -d '${prettyJson(payload)}'`;
+  -d '${parsedRequest ? prettyJson(parsedRequest) : requestJson}'`;
+
+  function handleExampleChange(exampleKey) {
+    const example = tokenExampleOptions.find((option) => option.key === exampleKey) || initialExample;
+    setSelectedExample(example.key);
+    setRequestJson(prettyJson(example.value));
+    setResponse(null);
+    setError('');
+  }
 
   async function generateToken() {
     setLoading(true);
     setError('');
     setResponse(null);
 
+    if (!parsedRequest) {
+      setLoading(false);
+      setError('Request JSON is invalid.');
+      return;
+    }
+
     try {
       const result = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(parsedRequest),
       });
       const json = await result.json();
       if (!result.ok) {
@@ -167,53 +174,24 @@ export default function TryTokenWidget() {
     <section className={styles.widget} aria-label="JWTForge token generator">
       <div className={styles.controls}>
         <label className={styles.field}>
-          <span>Mode</span>
-          <select value={mode} onChange={(event) => setMode(event.target.value)}>
-            <option value="fake">fake</option>
-            <option value="fuzz">fuzz</option>
-            <option value="malicious">malicious</option>
-            <option value="grammar">grammar</option>
-          </select>
-        </label>
-
-        <label className={styles.field}>
-          <span>Vulnerability</span>
-          <select
-            value={vulnerability}
-            onChange={(event) => setVulnerability(event.target.value)}
-          >
-            {vulnerabilityPresets.map((preset) => (
-              <option key={preset || 'none'} value={preset}>{preset || 'none'}</option>
+          <span>Example</span>
+          <select value={selectedExample} onChange={(event) => handleExampleChange(event.target.value)}>
+            {tokenExampleGroups.map((group) => (
+              <optgroup key={group.label} label={group.label}>
+                {group.options.map((example) => (
+                  <option key={example.key} value={example.key}>{example.label}</option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
-
-        <label className={styles.field}>
-          <span>Signature</span>
-          <select value={signatureMode} onChange={(event) => setSignatureMode(event.target.value)}>
-            <option value="normal">normal</option>
-            <option value="unsigned">false</option>
-            <option value="literal">literal</option>
-          </select>
-        </label>
-
-        {signatureMode === 'literal' && (
-          <label className={styles.field}>
-            <span>Literal signature</span>
-            <input value={literalSignature} onChange={(event) => setLiteralSignature(event.target.value)} />
-          </label>
-        )}
       </div>
 
       <div className={styles.editors}>
-        <label className={styles.editor}>
-          <span>Header JSON</span>
-          <textarea value={headerJson} onChange={(event) => setHeaderJson(event.target.value)} spellCheck="false" />
-        </label>
-        <label className={styles.editor}>
-          <span>Body JSON</span>
-          <textarea value={bodyJson} onChange={(event) => setBodyJson(event.target.value)} spellCheck="false" />
-        </label>
+        <div className={styles.editor}>
+          <span>Request JSON</span>
+          <HighlightedJsonEditor value={requestJson} onChange={setRequestJson} />
+        </div>
       </div>
 
       <div className={styles.actions}>
@@ -227,20 +205,20 @@ export default function TryTokenWidget() {
 
       <div className={styles.outputGrid}>
         <div className={styles.panel}>
-          <div className={styles.panelHeader}>Request</div>
-          <pre>{prettyJson(payload)}</pre>
-        </div>
-        <div className={styles.panel}>
           <div className={styles.panelHeader}>Response</div>
-          <pre>{response ? prettyJson(response) : 'No response yet'}</pre>
+          <JsonOutput value={response} emptyText="No response yet" />
         </div>
         <div className={styles.panel}>
-          <div className={styles.panelHeader}>Decoded header</div>
-          <pre>{decoded.header ? prettyJson(decoded.header) : 'No token yet'}</pre>
+          <div className={styles.panelHeader}>Decoded Header</div>
+          <JsonOutput value={decoded.header} emptyText="No token yet" />
         </div>
         <div className={styles.panel}>
-          <div className={styles.panelHeader}>Decoded body</div>
-          <pre>{decoded.body ? prettyJson(decoded.body) : 'No token yet'}</pre>
+          <div className={styles.panelHeader}>Decoded Body</div>
+          <JsonOutput value={decoded.body} emptyText="No token yet" />
+        </div>
+        <div className={styles.panel}>
+          <div className={styles.panelHeader}>Signature</div>
+          <pre>{token ? (decoded.signature || '(empty signature segment)') : 'No token yet'}</pre>
         </div>
       </div>
     </section>

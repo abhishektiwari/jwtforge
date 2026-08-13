@@ -67,7 +67,7 @@
 
 .grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: 1fr;
 }
 
 .panel {
@@ -80,7 +80,7 @@
 }
 
 .panel + .panel {
-  border-left: 1px solid var(--ifm-color-emphasis-300);
+  border-top: 1px solid var(--ifm-color-emphasis-300);
 }
 
 .panelHeader {
@@ -109,20 +109,30 @@
   min-height: 150px;
 }
 
+.panel .codeBlock,
+.decodedPanel .codeBlock {
+  margin: 0;
+  border-radius: 0;
+}
+
+.panel .codeBlock pre,
+.decodedPanel .codeBlock pre {
+  min-height: 180px;
+  max-height: 320px;
+  margin: 0;
+}
+
+.decodedPanel .codeBlock pre {
+  min-height: 150px;
+}
+
+.emptyOutput {
+  color: var(--ifm-color-emphasis-700);
+}
+
 .error {
   border-top: 1px solid var(--jwtforge-coral);
   background: color-mix(in srgb, var(--jwtforge-coral) 18%, white);
   color: var(--jwtforge-tile);
   padding: 0.65rem 0.75rem;
-}
-
-@media (max-width: 996px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-
-  .panel + .panel {
-    border-top: 1px solid var(--ifm-color-emphasis-300);
-    border-left: 0;
-  }
 }
