@@ -2,7 +2,7 @@
  * Tests for structured token request normalization.
  */
 
-import { applyVulnerabilityPreset, normalizeTokenRequest } from '../src/tokenrequest.js';
+import { applyVulnerabilityPreset, normalizeTokenRequest, removeUndefinedFields } from '../src/tokenrequest.js';
 
 describe('Structured token request normalization', () => {
   test('legacy flat payload maps to body claims', () => {
@@ -61,6 +61,62 @@ describe('Structured token request normalization', () => {
   test('misspelled mode aliases normalize to canonical modes', () => {
     expect(normalizeTokenRequest({ mode: 'malcious' }).options.mode).toBe('malicious');
     expect(normalizeTokenRequest({ mode: 'grammer' }).options.mode).toBe('grammar');
+  });
+
+  test('rejects non-object request and non-object structured fields', () => {
+    expect(() => normalizeTokenRequest(null)).toThrow('JSON request body must be an object');
+    expect(() => normalizeTokenRequest([])).toThrow('JSON request body must be an object');
+    expect(() => normalizeTokenRequest({ header: 'not-object' })).toThrow('header must be an object');
+    expect(() => normalizeTokenRequest({ body: 'not-object' })).toThrow('body must be an object');
+  });
+
+  test('rejects unknown header fields', () => {
+    expect(() => normalizeTokenRequest({
+      header: { crit: ['exp'] },
+      body: { sub: 'user123' }
+    })).toThrow('Unsupported JWT header field');
+  });
+
+  test('supports empty structured wrapper and structured options from body', () => {
+    const normalized = normalizeTokenRequest({
+      header: undefined,
+      body: {
+        sub: 'user123',
+        exclude: ['exp'],
+        malicious_category: 'xss',
+        grammar_category: 'valid',
+        vulnerability: 'kid_traversal',
+        alg_none_variant: 'None'
+      },
+      signature: true
+    });
+
+    expect(normalized.structured).toBe(true);
+    expect(normalized.header).toEqual({});
+    expect(normalized.signature).toBeUndefined();
+    expect(normalized.options.exclude).toEqual(['exp']);
+    expect(normalized.options.maliciousCategory).toBe('xss');
+    expect(normalized.options.grammarCategory).toBe('valid');
+    expect(normalized.options.vulnerability).toBe('kid_traversal');
+    expect(normalized.options.algNoneVariant).toBe('None');
+    expect(normalized.body).toEqual({ sub: 'user123' });
+  });
+
+  test('supports legacy header kid and removes undefined values', () => {
+    const normalized = normalizeTokenRequest({
+      sub: 'user123',
+      email: undefined,
+      header_kid: 'legacy-key'
+    });
+
+    expect(normalized.header.kid).toBe('legacy-key');
+    expect(normalized.body.email).toBeUndefined();
+    expect(removeUndefinedFields({ a: 1, b: undefined })).toEqual({ a: 1 });
+  });
+
+  test('rejects invalid signature types', () => {
+    expect(() => normalizeTokenRequest({ signature: { value: 'bad' } }))
+      .toThrow('signature must be false, a string, or omitted');
   });
 });
 
@@ -139,5 +195,38 @@ describe('Structured vulnerability presets', () => {
     applyVulnerabilityPreset(normalized, { publicKey });
 
     expect(normalized.header.jwk).toBe(publicKey);
+  });
+
+  test('kid traversal and jku injection presets set expected headers', () => {
+    const kidTraversal = normalizeTokenRequest({
+      vulnerability: 'kid_traversal',
+      body: { sub: 'admin' }
+    });
+    const jkuInjection = normalizeTokenRequest({
+      vulnerability: 'jku_injection',
+      body: { sub: 'admin' }
+    });
+
+    applyVulnerabilityPreset(kidTraversal, { publicKey: { kid: 'public' } });
+    applyVulnerabilityPreset(jkuInjection, { publicKey: { kid: 'public' } });
+
+    expect(kidTraversal.header.kid).toBe('../../../../../../dev/null');
+    expect(jkuInjection.header.jku).toBe('https://attacker.example.com/.well-known/jwks.json');
+  });
+
+  test('no vulnerability preset returns normalized request unchanged', () => {
+    const normalized = normalizeTokenRequest({ body: { sub: 'user123' } });
+
+    expect(applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } })).toBe(normalized);
+  });
+
+  test('unsupported vulnerability preset is rejected', () => {
+    const normalized = normalizeTokenRequest({
+      vulnerability: 'unknown',
+      body: { sub: 'admin' }
+    });
+
+    expect(() => applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } }))
+      .toThrow('Unsupported vulnerability mode');
   });
 });

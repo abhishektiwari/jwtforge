@@ -209,6 +209,32 @@ describe('Modes - Transformations', () => {
     expect(result.alg).toBe('RS256');
     expect(result.kid).toBe('stable-key');
   });
+
+  test('applyHeaderTransformations fuzzes embedded jwk objects', () => {
+    const result = applyHeaderTransformations(
+      { header: { jwk: { kty: 'RSA', kid: 'embedded' } } },
+      'fuzz'
+    );
+
+    expect(result.jwk).toBeDefined();
+    expect(result.jwk).toHaveProperty('kty');
+    expect(result.jwk).toHaveProperty('kid');
+  });
+
+  test('applyHeaderTransformations malicious mode can produce none alg and malicious jwk', () => {
+    const originalRandom = Math.random;
+    Math.random = () => 0.1;
+
+    try {
+      const algResult = applyHeaderTransformations({ header: { alg: 'RS256' } }, 'malicious');
+      const jwkResult = applyHeaderTransformations({ header: { jwk: { kty: 'RSA' } } }, 'malicious');
+
+      expect(algResult.alg).toBe('none');
+      expect(jwkResult.jwk).toEqual(expect.objectContaining({ kty: 'RSA', use: 'sig' }));
+    } finally {
+      Math.random = originalRandom;
+    }
+  });
 });
 
 describe('Modes - Grammar', () => {
@@ -264,6 +290,64 @@ describe('Modes - Grammar', () => {
 
     expect(result.jku).toBeDefined();
     expect(result.jwk).toBeDefined();
+  });
+
+  test('grammar transformations return claims unchanged without grammar', () => {
+    const claims = { sub: 'user123' };
+
+    expect(applyGrammarTransformations(claims, null)).toBe(claims);
+    expect(applyGrammarTransformations(claims, {})).toBe(claims);
+  });
+
+  test('grammar transformations use oidc and auth claim rules', () => {
+    const grammar = {
+      standardClaims: {},
+      oidcClaims: {
+        email: { valid: ['user@example.com'] }
+      },
+      authClaims: {
+        roles: { valid: [['admin']] }
+      }
+    };
+
+    const result = applyGrammarTransformations(
+      { email: 'trigger', roles: ['user'], custom: 'unchanged' },
+      grammar,
+      [],
+      'valid'
+    );
+
+    expect(result.email).toBe('user@example.com');
+    expect(result.roles).toEqual(['admin']);
+    expect(result.custom).toBe('unchanged');
+  });
+
+  test('grammar header transformations return empty without header grammar', () => {
+    expect(applyGrammarHeaderTransformations({ header: { alg: 'RS256' } }, null)).toEqual({});
+    expect(applyGrammarHeaderTransformations({ header: { alg: 'RS256' } }, {})).toEqual({});
+  });
+
+  test('grammar header transformations preserve unknown header fields', () => {
+    const result = applyGrammarHeaderTransformations(
+      { header: { custom: 'value' } },
+      { header: {} }
+    );
+
+    expect(result.custom).toBe('value');
+  });
+
+  test('grammar selection falls back to value or null', () => {
+    const valueResult = applyGrammarHeaderTransformations(
+      { header: { custom: 'trigger' } },
+      { header: { custom: { value: 'fallback-value' } } }
+    );
+    const nullResult = applyGrammarHeaderTransformations(
+      { header: { custom: 'trigger' } },
+      { header: { custom: {} } }
+    );
+
+    expect(valueResult.custom).toBe('fallback-value');
+    expect(nullResult.custom).toBeNull();
   });
 });
 

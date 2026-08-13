@@ -224,10 +224,12 @@ Cloudflare dashboard build configuration:
 
 | Field | Value |
 | --- | --- |
-| Build command | `npm run docs:build` |
-| Deploy command | `npx wrangler deploy` |
+| Build command | None |
+| Deploy command | `npx wrangler versions upload` |
 | Version command | `npx wrangler versions upload` |
 | Root directory | `/` |
+| Build token | `jwtforge-dev build token` |
+| Build variables | None |
 
 ## Security Notice
 

@@ -106,12 +106,14 @@ For Cloudflare dashboard deployments, use these build settings:
 
 | Field | Value |
 | --- | --- |
-| Build command | `npm run docs:build` |
-| Deploy command | `npx wrangler deploy` |
+| Build command | None |
+| Deploy command | `npx wrangler versions upload` |
 | Version command | `npx wrangler versions upload` |
 | Root directory | `/` |
+| Build token | `jwtforge-dev build token` |
+| Build variables | None |
 
-The dashboard Build command must create `./build` before the deploy command runs. Keep `[build] command = "npm run docs:build"` in `wrangler.toml` as a local/direct Wrangler safeguard, but do not rely on it as the only build step in Cloudflare dashboard deployments.
+The dashboard Build command can stay empty because Wrangler reads `[build] command = "npm run docs:build"` from `wrangler.toml`. In the build log this appears as `[custom build] Running: npm run docs:build` before Wrangler uploads static assets from `./build`.
 
 ## Swagger UI
 
