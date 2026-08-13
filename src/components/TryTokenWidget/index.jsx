@@ -1,5 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
+import CodeBlock from '@theme/CodeBlock';
+import { Highlight, themes } from 'prism-react-renderer';
 import { tokenExampleGroups, tokenExampleOptions } from '../../token-examples.js';
 import styles from './styles.module.css';
 
@@ -33,6 +35,49 @@ function safeJsonParse(value, fallback = null) {
 
 function prettyJson(value) {
   return JSON.stringify(value, null, 2);
+}
+
+function JsonOutput({ value, emptyText }) {
+  if (!value) {
+    return <pre className={styles.emptyOutput}>{emptyText}</pre>;
+  }
+
+  return (
+    <CodeBlock language="json" className={styles.codeBlock}>
+      {prettyJson(value)}
+    </CodeBlock>
+  );
+}
+
+function HighlightedJsonEditor({ value, onChange }) {
+  return (
+    <div className={styles.splitEditor}>
+      <label className={styles.editorPane}>
+        <span>Input</span>
+        <textarea
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          spellCheck="false"
+        />
+      </label>
+      <div className={styles.previewPane}>
+        <span>Preview</span>
+        <Highlight theme={themes.github} code={value || ' '} language="json">
+          {({ className, style, tokens, getLineProps, getTokenProps }) => (
+            <pre className={`${className} ${styles.previewCode}`} style={style}>
+              {tokens.map((line, index) => (
+                <div key={index} {...getLineProps({ line })}>
+                  {line.map((token, key) => (
+                    <span key={key} {...getTokenProps({ token })} />
+                  ))}
+                </div>
+              ))}
+            </pre>
+          )}
+        </Highlight>
+      </div>
+    </div>
+  );
 }
 
 function decodeJwtPart(value) {
@@ -143,10 +188,10 @@ export default function TryTokenWidget() {
       </div>
 
       <div className={styles.editors}>
-        <label className={styles.editor}>
+        <div className={styles.editor}>
           <span>Request JSON</span>
-          <textarea value={requestJson} onChange={(event) => setRequestJson(event.target.value)} spellCheck="false" />
-        </label>
+          <HighlightedJsonEditor value={requestJson} onChange={setRequestJson} />
+        </div>
       </div>
 
       <div className={styles.actions}>
@@ -161,15 +206,15 @@ export default function TryTokenWidget() {
       <div className={styles.outputGrid}>
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Response</div>
-          <pre>{response ? prettyJson(response) : 'No response yet'}</pre>
+          <JsonOutput value={response} emptyText="No response yet" />
         </div>
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Decoded Header</div>
-          <pre>{decoded.header ? prettyJson(decoded.header) : 'No token yet'}</pre>
+          <JsonOutput value={decoded.header} emptyText="No token yet" />
         </div>
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Decoded Body</div>
-          <pre>{decoded.body ? prettyJson(decoded.body) : 'No token yet'}</pre>
+          <JsonOutput value={decoded.body} emptyText="No token yet" />
         </div>
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Signature</div>
