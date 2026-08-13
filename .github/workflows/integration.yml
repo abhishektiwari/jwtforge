@@ -102,23 +102,44 @@ jobs:
           --reporters cli,json \
           --reporter-json-export integration-test-results.json || true
 
+    - name: Run JWT vulnerability integration tests
+      run: |
+        npx newman run example/Axioms_FastAPI_JWT_Vulnerabilities.postman_collection.json \
+          -e example/Axioms_FastAPI_Example.postman_environment.json \
+          --delay-request 5000 \
+          --reporters cli,json \
+          --reporter-json-export integration-jwt-vulnerability-results.json || true
+
     - name: Upload integration test results
       if: always()
       uses: actions/upload-artifact@v4
       with:
         name: integration-test-results
-        path: integration-test-results.json
+        path: |
+          integration-test-results.json
+          integration-jwt-vulnerability-results.json
 
     - name: Summary
       if: always()
       run: |
         echo "## Integration Test Summary"
+        EXIT_CODE=0
         if [ -f integration-test-results.json ]; then
           PASSED=$(jq '.run.stats.assertions.passed' integration-test-results.json)
           FAILED=$(jq '.run.stats.assertions.failed' integration-test-results.json)
-          echo "✓ Passed: $PASSED"
-          echo "❌ Failed: $FAILED"
+          echo "Functional collection passed: $PASSED"
+          echo "Functional collection failed: $FAILED"
           if [ "$FAILED" -gt 0 ]; then
-            exit 1
+            EXIT_CODE=1
           fi
         fi
+        if [ -f integration-jwt-vulnerability-results.json ]; then
+          PASSED=$(jq '.run.stats.assertions.passed' integration-jwt-vulnerability-results.json)
+          FAILED=$(jq '.run.stats.assertions.failed' integration-jwt-vulnerability-results.json)
+          echo "JWT vulnerability collection passed: $PASSED"
+          echo "JWT vulnerability collection failed: $FAILED"
+          if [ "$FAILED" -gt 0 ]; then
+            EXIT_CODE=1
+          fi
+        fi
+        exit "$EXIT_CODE"
