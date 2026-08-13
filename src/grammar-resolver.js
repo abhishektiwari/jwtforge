@@ -112,7 +112,9 @@ function fallbackFaker(kind) {
     case 'boolean':
       return Math.random() < 0.5;
     case 'uuid':
-      return crypto.randomUUID ? crypto.randomUUID() : '550e8400-e29b-41d4-a716-446655440000';
+      return globalThis.crypto?.randomUUID
+        ? globalThis.crypto.randomUUID()
+        : '550e8400-e29b-41d4-a716-446655440000';
     default:
       throw new Error(`Unsupported faker template kind: ${kind}`);
   }
