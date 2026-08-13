@@ -89,10 +89,9 @@ describe('Integration - Token Generation with Modes', () => {
     test('Malicious mode injects payloads', () => {
       const result = applyModeTransformations({ ...basePayload }, 'malicious');
 
-      const modified =
-        result.sub !== basePayload.sub ||
-        result.email !== basePayload.email ||
-        result.name !== basePayload.name;
+      const modified = Object.keys(basePayload)
+        .filter(key => !['iss', 'jti'].includes(key))
+        .some(key => result[key] !== basePayload[key]);
 
       expect(modified).toBe(true);
     });

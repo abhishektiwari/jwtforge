@@ -1,4 +1,4 @@
-.PHONY: help install dev deploy logs tail test test-unit test-integration test-coverage test-watch test-server test-e2e test-e2e-dev test-e2e-advanced clean
+.PHONY: help install dev docs docs-start docs-build docs-serve docs-clear deploy logs tail test test-unit test-feature test-all test-coverage test-watch test-server test-e2e-dev test-e2e-adv test-prod clean login info rollback
 
 # Default target
 help:
@@ -7,6 +7,10 @@ help:
 	@echo "Setup & Deployment:"
 	@echo "  make install       - Install dependencies"
 	@echo "  make dev           - Run local development server"
+	@echo "  make docs-start    - Run Docusaurus docs development server"
+	@echo "  make docs-build    - Build Docusaurus static documentation"
+	@echo "  make docs-serve    - Serve the built Docusaurus site locally"
+	@echo "  make docs-clear    - Clear Docusaurus cache"
 	@echo "  make deploy        - Deploy to Cloudflare Workers"
 	@echo "  make logs          - Stream real-time logs from deployed worker"
 	@echo "  make tail          - Alias for logs"
@@ -33,6 +37,25 @@ install:
 # Run local development server
 dev:
 	npm run dev
+
+# Alias for docs build
+docs: docs-build
+
+# Run Docusaurus development server
+docs-start:
+	npm run docs:start
+
+# Build Docusaurus static documentation
+docs-build:
+	npm run docs:build
+
+# Serve built Docusaurus documentation
+docs-serve:
+	npm run docs:serve
+
+# Clear Docusaurus generated cache
+docs-clear:
+	npm run docs:clear
 
 # Deploy to Cloudflare Workers
 deploy:
@@ -166,8 +189,10 @@ test-prod:
 clean:
 	rm -rf node_modules
 	rm -rf .wrangler
+	rm -rf .docusaurus
+	rm -rf build
 	rm -rf test-results-*.json
-	@echo "Cleaned node_modules and .wrangler directories"
+	@echo "Cleaned node_modules, .wrangler, Docusaurus build artifacts, and test results"
 
 # Login to Cloudflare
 login:

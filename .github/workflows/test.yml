@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [22.x, 24.x]
 
     steps:
     - uses: actions/checkout@v4
@@ -43,10 +43,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
-    - name: Use Node.js 20.x
+    - name: Use Node.js 22.x
       uses: actions/setup-node@v4
       with:
-        node-version: 20.x
+        node-version: 22.x
         cache: 'npm'
 
     - name: Install dependencies
@@ -56,11 +56,13 @@ jobs:
       run: npm install -g wrangler
 
     - name: Start dev server
-      run: npm run dev &
+      run: |
+        echo "ISSUER=http://localhost:8787" > .dev.vars
+        npm run dev &
       timeout-minutes: 1
 
     - name: Wait for server
-      run: sleep 5 && curl -f http://localhost:8787/ || exit 1
+      run: sleep 30 && curl -f http://localhost:8787/.well-known/openid-configuration || exit 1
 
     - name: Run Postman basic collection tests
       run: npx newman run tests/e2e/JWTForge-Collection.postman_collection.json \

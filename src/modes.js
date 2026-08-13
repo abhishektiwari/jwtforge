@@ -4,6 +4,7 @@
  */
 
 import blns from 'blns';
+import { resolveGrammarValue } from './grammar-resolver.js';
 
 /**
  * Generate fuzzed values for security testing using blns (Big List of Naughty Strings)
@@ -198,51 +199,76 @@ export function applyModeTransformations(claims, mode, exclude = []) {
   return modifiedClaims;
 }
 
+function isExcluded(exclude, field, legacyField = null) {
+  return exclude.includes(field) ||
+    exclude.includes(`header.${field}`) ||
+    (legacyField && exclude.includes(legacyField));
+}
+
+function getHeaderInput(requestData) {
+  const header = requestData.header && typeof requestData.header === 'object'
+    ? { ...requestData.header }
+    : {};
+
+  if (requestData.header_alg !== undefined && header.alg === undefined) {
+    header.alg = requestData.header_alg;
+  }
+  if (requestData.header_kid !== undefined && header.kid === undefined) {
+    header.kid = requestData.header_kid;
+  }
+
+  return header;
+}
+
+function getFuzzedHeaderValue(field) {
+  if (field === 'alg') return getFuzzedAlgorithm();
+  if (field === 'jwk') return { kty: getFuzzedValue(), kid: getFuzzedValue() };
+  return getFuzzedValue();
+}
+
+function getMaliciousHeaderValue(field, category = null) {
+  if (field === 'alg') {
+    return Math.random() < 0.5 ? 'none' : getMaliciousValue(category);
+  }
+  if (field === 'jwk') {
+    return {
+      kty: 'RSA',
+      kid: getMaliciousValue(category),
+      use: 'sig'
+    };
+  }
+  return getMaliciousValue(category);
+}
+
 /**
  * Apply mode-specific transformations to JWT header fields
- * @param {Object} requestData - The request data that may contain header_alg and header_kid
+ * @param {Object} requestData - The request data that may contain header or legacy header_alg/header_kid
  * @param {string} mode - The mode: 'fake' (default), 'fuzz', or 'malicious'
  * @param {Array<string>} exclude - List of header fields to exclude from transformation
  * @returns {Object} Header overrides object
  */
 export function applyHeaderTransformations(requestData, mode, exclude = []) {
+  const headerInput = getHeaderInput(requestData);
   const headerOverrides = {};
 
   if (mode === 'fuzz' || mode === 'malicious') {
-    // Transform header_alg if provided and not excluded
-    if (requestData.header_alg !== undefined && !exclude.includes('header_alg')) {
-      if (mode === 'fuzz') {
-        headerOverrides.alg = getFuzzedAlgorithm();
-      } else {
-        // For malicious mode, also use algorithm confusion attacks
-        headerOverrides.alg = Math.random() < 0.5 ? 'none' : getMaliciousValue();
+    Object.keys(headerInput).forEach(field => {
+      const legacyField = field === 'alg' ? 'header_alg' : field === 'kid' ? 'header_kid' : null;
+      if (isExcluded(exclude, field, legacyField)) {
+        headerOverrides[field] = headerInput[field];
+        return;
       }
-    } else if (requestData.header_alg !== undefined) {
-      // If excluded, use the provided value
-      headerOverrides.alg = requestData.header_alg;
-    }
 
-    // Transform header_kid if provided and not excluded
-    if (requestData.header_kid !== undefined && !exclude.includes('header_kid')) {
       if (mode === 'fuzz') {
-        headerOverrides.kid = getFuzzedValue();
+        headerOverrides[field] = getFuzzedHeaderValue(field);
       } else {
-        // Use malicious_category if provided for header fields
         const category = requestData.malicious_category || null;
-        headerOverrides.kid = getMaliciousValue(category);
+        headerOverrides[field] = getMaliciousHeaderValue(field, category);
       }
-    } else if (requestData.header_kid !== undefined) {
-      // If excluded, use the provided value
-      headerOverrides.kid = requestData.header_kid;
-    }
+    });
   } else {
-    // In 'fake' mode, just pass through if provided
-    if (requestData.header_alg !== undefined) {
-      headerOverrides.alg = requestData.header_alg;
-    }
-    if (requestData.header_kid !== undefined) {
-      headerOverrides.kid = requestData.header_kid;
-    }
+    // In 'fake' mode, just pass through supported provided header fields.
+    Object.assign(headerOverrides, headerInput);
   }
 
   return headerOverrides;
@@ -306,27 +332,21 @@ export function applyGrammarHeaderTransformations(requestData, grammar, exclude 
     return {};
   }
 
+  const headerInput = getHeaderInput(requestData);
   const headerOverrides = {};
 
-  // Apply grammar to header_alg if provided and not excluded
-  if (requestData.header_alg !== undefined && !exclude.includes('header_alg')) {
-    const algRule = grammar.header.alg;
-    if (algRule) {
-      headerOverrides.alg = selectRandomFromGrammar(algRule, grammarCategory);
+  Object.keys(headerInput).forEach(field => {
+    const legacyField = field === 'alg' ? 'header_alg' : field === 'kid' ? 'header_kid' : null;
+    if (isExcluded(exclude, field, legacyField)) {
+      headerOverrides[field] = headerInput[field];
+      return;
     }
-  } else if (requestData.header_alg !== undefined) {
-    headerOverrides.alg = requestData.header_alg;
-  }
 
-  // Apply grammar to header_kid if provided and not excluded
-  if (requestData.header_kid !== undefined && !exclude.includes('header_kid')) {
-    const kidRule = grammar.header.kid;
-    if (kidRule) {
-      headerOverrides.kid = selectRandomFromGrammar(kidRule, grammarCategory);
-    }
-  } else if (requestData.header_kid !== undefined) {
-    headerOverrides.kid = requestData.header_kid;
-  }
+    const rule = grammar.header[field];
+    headerOverrides[field] = rule
+      ? selectRandomFromGrammar(rule, grammarCategory)
+      : headerInput[field];
+  });
 
   return headerOverrides;
 }
@@ -342,7 +362,7 @@ function selectRandomFromGrammar(rule, specificCategory = null) {
   // If specific category requested, try to use it
   if (specificCategory && rule[specificCategory] && Array.isArray(rule[specificCategory]) && rule[specificCategory].length > 0) {
     const values = rule[specificCategory];
-    return values[Math.floor(Math.random() * values.length)];
+    return resolveGrammarValue(values[Math.floor(Math.random() * values.length)]);
   }
 
   // Available categories in order of preference (if no specific category)
@@ -367,13 +387,13 @@ function selectRandomFromGrammar(rule, specificCategory = null) {
   for (const category of categories) {
     if (rule[category] && Array.isArray(rule[category]) && rule[category].length > 0) {
       const values = rule[category];
-      return values[Math.floor(Math.random() * values.length)];
+      return resolveGrammarValue(values[Math.floor(Math.random() * values.length)]);
     }
   }
 
   // Fallback: if rule has a single value property
   if (rule.value !== undefined) {
-    return rule.value;
+    return resolveGrammarValue(rule.value);
   }
 
   // Last resort: return null

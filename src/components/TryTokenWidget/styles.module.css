@@ -1,0 +1,145 @@
+.widget {
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+  padding: 1rem;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 0.75rem;
+}
+
+.field,
+.editor {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.field input,
+.field select,
+.editor textarea {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 6px;
+  background: var(--ifm-background-color);
+  color: var(--ifm-font-color-base);
+  padding: 0.5rem 0.625rem;
+  font: inherit;
+}
+
+.editors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.editor textarea {
+  min-height: 190px;
+  resize: vertical;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.primaryButton,
+.secondaryButton {
+  border: 0;
+  border-radius: 6px;
+  padding: 0.65rem 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.primaryButton {
+  background: var(--jwtforge-violet);
+  color: #ffffff;
+}
+
+.primaryButton:hover:not(:disabled),
+.primaryButton:focus-visible:not(:disabled) {
+  background: var(--jwtforge-amber);
+  color: var(--jwtforge-tile);
+  transform: translateY(-1px);
+}
+
+.primaryButton:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.secondaryButton {
+  background: var(--jwtforge-steel);
+  color: var(--jwtforge-tile);
+}
+
+.secondaryButton:hover,
+.secondaryButton:focus-visible {
+  background: var(--jwtforge-coral);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.error {
+  margin-top: 0.75rem;
+  border: 1px solid var(--jwtforge-coral);
+  border-radius: 6px;
+  color: var(--jwtforge-tile);
+  background: color-mix(in srgb, var(--jwtforge-coral) 18%, white);
+  padding: 0.65rem 0.75rem;
+}
+
+.outputGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.9rem;
+}
+
+.panel {
+  min-width: 0;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.panelHeader {
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-color-emphasis-100);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.panel pre {
+  min-height: 150px;
+  max-height: 280px;
+  margin: 0;
+  overflow: auto;
+  background: transparent;
+  padding: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+@media (max-width: 996px) {
+  .controls,
+  .editors,
+  .outputGrid {
+    grid-template-columns: 1fr;
+  }
+}

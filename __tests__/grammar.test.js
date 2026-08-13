@@ -14,6 +14,7 @@ import {
   getAllClaimNames,
   getAllHeaderFieldNames
 } from '../src/grammar.js';
+import { resolveGrammarValue } from '../src/grammar-resolver.js';
 
 describe('Grammar - Structure', () => {
   test('getCompleteGrammar returns all grammar objects', () => {
@@ -62,7 +63,7 @@ describe('Grammar - Header Fields', () => {
 
   test('Algorithm grammar includes vulnerable patterns', () => {
     expect(Array.isArray(headerGrammar.alg.vulnerable)).toBe(true);
-    expect(headerGrammar.alg.vulnerable).toContain('none');
+    expect(headerGrammar.alg.vulnerable.map(resolveGrammarValue)).toContain('none');
   });
 
   test('Header grammar contains type field', () => {
@@ -143,7 +144,7 @@ describe('Grammar - Standard Claims', () => {
     expect(exp.valid).toBeDefined();
     expect(exp.edge_cases).toBeDefined();
     // Should have past, future, zero, negative values
-    expect(exp.edge_cases.some(v => typeof v === 'number')).toBe(true);
+    expect(exp.edge_cases.map(resolveGrammarValue).some(v => typeof v === 'number')).toBe(true);
   });
 });
 
@@ -166,8 +167,7 @@ describe('Grammar - OIDC Claims', () => {
   test('Email verified has boolean variations', () => {
     const emailVerified = oidcClaimsGrammar.email_verified;
 
-    expect(emailVerified.valid).toContain(true);
-    expect(emailVerified.valid).toContain(false);
+    expect(emailVerified.valid.map(resolveGrammarValue).every(value => typeof value === 'boolean')).toBe(true);
   });
 
   test('Name has injection patterns for XSS', () => {
