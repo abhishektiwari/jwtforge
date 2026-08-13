@@ -75,9 +75,13 @@ Local URLs:
 
 | Service | URL |
 | --- | --- |
-| API and Swagger UI | `http://localhost:8787` |
+| Worker static docs and API | `http://localhost:8787` |
+| Token API | `http://localhost:8787/token` |
+| Swagger UI | `http://localhost:8787/swagger` |
 | OpenAPI JSON | `http://localhost:8787/openapi.json` |
-| Docusaurus docs | `http://localhost:3000` |
+| Docusaurus dev server | `http://localhost:3000` |
+
+Because Wrangler static assets are enabled, `npm run dev` can serve the built Docusaurus site and API from `http://localhost:8787`. `npm run docs:start` serves the live Docusaurus development server from `http://localhost:3000`.
 
 Hosted URLs:
 
@@ -214,7 +218,16 @@ npm install
 npm run deploy
 ```
 
-The deploy script builds the Docusaurus static site into `build/` and deploys it with the Worker using Wrangler static assets. JWTForge works on the Cloudflare Workers free plan with Workers KV. Durable Objects are optional for stronger consistency.
+Wrangler runs the configured Docusaurus build command before deployment, writes static assets to `build/`, and deploys them with the Worker. JWTForge works on the Cloudflare Workers free plan with Workers KV. Durable Objects are optional for stronger consistency.
+
+Cloudflare dashboard build configuration:
+
+| Field | Value |
+| --- | --- |
+| Build command | `npm run docs:build` |
+| Deploy command | `npx wrangler deploy` |
+| Version command | `npx wrangler versions upload` |
+| Root directory | `/` |
 
 ## Security Notice
 

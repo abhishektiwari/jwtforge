@@ -3,6 +3,9 @@ name = "jwtforge"
 main = "src/index.js"
 compatibility_date = "2026-05-03"
 
+[build]
+command = "npm run docs:build"
+
 [assets]
 directory = "./build"
 binding = "ASSETS"
