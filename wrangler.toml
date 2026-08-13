@@ -19,6 +19,14 @@ run_worker_first = [
   "/swagger/*"
 ]
 
+[[ratelimits]]
+name = "API_RATE_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 30
+  period = 60
+
 [vars]
 ISSUER = "https://jwtforge.dev"
 # Set to "true" to use Durable Objects instead of KV (requires Workers Paid Plan)

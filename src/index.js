@@ -42,6 +42,41 @@ async function maybeServeStaticAsset(request, env) {
   return response.status === 404 ? null : response;
 }
 
+const API_RATE_LIMITED_PATHS = new Set(['/token', '/introspect']);
+
+async function enforceApiRateLimit(request, env, path) {
+  if (!env?.API_RATE_LIMITER || !API_RATE_LIMITED_PATHS.has(path)) {
+    return null;
+  }
+
+  const clientKey =
+    request.headers.get('Authorization') ||
+    request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-forwarded-for') ||
+    'anonymous';
+
+  const { success } = await env.API_RATE_LIMITER.limit({
+    key: `${path}:${clientKey}`,
+  });
+
+  if (success) {
+    return null;
+  }
+
+  return new Response(
+    JSON.stringify({
+      error: 'rate_limit_exceeded',
+      error_description: 'Too many requests. Please retry later.',
+    }),
+    {
+      status: 429,
+      headers: jsonHeaders({
+        'Retry-After': '60',
+      }),
+    }
+  );
+}
+
 /**
  * Get or create key data from storage backend (KV, Durable Objects, or memory cache)
  * Returns the current signing key (with automatic rotation)
@@ -706,8 +741,12 @@ export default {
 
     // Route handling
     if (path === '/token') {
+      const rateLimitResponse = await enforceApiRateLimit(request, env, path);
+      if (rateLimitResponse) return rateLimitResponse;
       return handleTokenRequest(request, env);
     } else if (path === '/introspect') {
+      const rateLimitResponse = await enforceApiRateLimit(request, env, path);
+      if (rateLimitResponse) return rateLimitResponse;
       return handleIntrospectionRequest(request, env);
     } else if (path === '/.well-known/jwks.json') {
       return handleJWKSRequest(env);

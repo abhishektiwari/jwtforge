@@ -143,7 +143,10 @@ jobs:
           GitHub: https://github.com/abhishektiwari/jwtforge
 
   publish-prerelease:
-    if: github.event_name == 'pull_request'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.actor != 'dependabot[bot]' &&
+      github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     needs: [generate-version, build]
 
