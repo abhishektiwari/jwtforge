@@ -7,21 +7,35 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "03:00"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 2
     reviewers:
       - "abhishektiwari"
     assignees:
       - "abhishektiwari"
     allow:
-      - dependency-type: "all"
+      - dependency-name: "@faker-js/faker"
+      - dependency-name: "blns"
+      - dependency-name: "wrangler"
+      - dependency-name: "@docusaurus/*"
+      - dependency-name: "docusaurus-plugin-llms"
+      - dependency-name: "@mdx-js/react"
+      - dependency-name: "prism-react-renderer"
+      - dependency-name: "react"
+      - dependency-name: "react-dom"
+      - dependency-name: "clsx"
+      - dependency-name: "jest"
+      - dependency-name: "babel-jest"
+      - dependency-name: "@babel/preset-env"
+      - dependency-name: "newman"
     commit-message:
       prefix: "chore(deps):"
       include: "scope"
     rebase-strategy: "auto"
     groups:
-      docusaurus:
+      docs:
         patterns:
           - "@docusaurus/*"
+          - "docusaurus-plugin-llms"
           - "@mdx-js/*"
           - "prism-react-renderer"
       react:
@@ -29,15 +43,15 @@ updates:
           - "react"
           - "react-dom"
           - "clsx"
+      worker-runtime:
+        patterns:
+          - "wrangler"
       testing:
         patterns:
           - "jest"
           - "babel-jest"
-          - "@babel/*"
+          - "@babel/preset-env"
           - "newman"
-      worker-runtime:
-        patterns:
-          - "wrangler"
       security-data:
         patterns:
           - "@faker-js/faker"
@@ -50,7 +64,7 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "03:00"
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 1
     reviewers:
       - "abhishektiwari"
     assignees:
