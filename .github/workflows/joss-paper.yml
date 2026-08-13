@@ -16,7 +16,7 @@ jobs:
     
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       
     - name: Build paper PDF
       uses: docker://openjournals/inara:latest
@@ -24,7 +24,7 @@ jobs:
         args: paper/paper.md
         
     - name: Upload paper artifacts
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: joss-paper
         path: |
