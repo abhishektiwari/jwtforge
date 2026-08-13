@@ -1,5 +1,7 @@
 ---
 title: Structured JSON
+description: Use JWTForge structured JSON requests with explicit JWT header, body, and signature objects for token generation and security testing.
+keywords: [JWT structured JSON, JWT header, JWT claims, JWT signature, token endpoint]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

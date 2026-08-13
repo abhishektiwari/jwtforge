@@ -1,5 +1,7 @@
 ---
 title: Grammar Mode
+description: Use deterministic JWTForge grammar templates to test valid, edge-case, vulnerable, injection, and type-variation values.
+keywords: [JWT grammar, deterministic fuzzing, JWT templates, security regression testing]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

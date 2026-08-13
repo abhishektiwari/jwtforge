@@ -1,5 +1,7 @@
 ---
 title: Evaluation
+description: JWTForge evaluation scenarios for integration testing, fuzzing, algorithm confusion, injection discovery, grammar testing, and OAuth2 flows.
+keywords: [JWTForge evaluation, JWT benchmarks, OAuth2 testing, JWT fuzzing, security research]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

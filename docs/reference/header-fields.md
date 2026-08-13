@@ -1,5 +1,7 @@
 ---
 title: Header Fields
+description: Reference for JWTForge supported and rejected structured JWT header fields, including alg, typ, cty, kid, jku, and jwk.
+keywords: [JWT header fields, alg, kid, jku, jwk, JWTForge reference]
 ---
 
 # Header Fields

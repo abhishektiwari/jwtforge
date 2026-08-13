@@ -1,5 +1,7 @@
 ---
 title: Security Testing Modes
+description: Compare JWTForge fake, fuzz, malicious, and grammar modes for OAuth2/OIDC integration, robustness, and security testing.
+keywords: [JWT testing modes, JWT fuzzing, malicious payloads, grammar testing, OAuth2 security]
 ---
 
 # Security Testing Modes

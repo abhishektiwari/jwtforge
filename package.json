@@ -56,6 +56,7 @@
     "@mdx-js/react": "^3.1.1",
     "babel-jest": "^30.4.1",
     "clsx": "^2.1.1",
+    "docusaurus-plugin-llms": "^0.5.1",
     "jest": "^30.4.2",
     "newman": "^6.2.2",
     "prism-react-renderer": "^2.4.1",

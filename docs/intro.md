@@ -1,6 +1,8 @@
 ---
 sidebar_position: 1
 title: Overview
+description: JWTForge overview for generating JWT tokens with OAuth2/OIDC claims, structured payloads, fuzzing modes, and security testing scenarios.
+keywords: [JWTForge, JWT testing, OAuth2, OIDC, Cloudflare Workers]
 ---
 
 # JWTForge

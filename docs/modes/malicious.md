@@ -1,5 +1,7 @@
 ---
 title: Malicious Mode
+description: Generate JWTs with malicious claim and header payloads for SQL injection, XSS, traversal, and downstream input handling tests.
+keywords: [JWT malicious payloads, SQL injection, XSS, path traversal, penetration testing]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

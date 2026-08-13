@@ -1,5 +1,7 @@
 ---
 title: OIDC/OAuth2 Claims
+description: Reference for JWTForge standard JWT, OIDC, OAuth2, and custom claim support in structured JSON payloads.
+keywords: [OIDC claims, OAuth2 claims, JWT claims, OpenID Connect]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

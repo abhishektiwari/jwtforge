@@ -1,5 +1,7 @@
 ---
 title: kid Injection
+description: Generate JWTs with malicious kid header values for key lookup, path traversal, and injection testing.
+keywords: [JWT kid injection, path traversal, JWT header, key lookup]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

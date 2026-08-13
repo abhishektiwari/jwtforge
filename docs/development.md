@@ -1,6 +1,8 @@
 ---
 sidebar_position: 2
 title: Local Development
+description: Run JWTForge locally with Wrangler on port 8787 and Docusaurus docs on port 3000.
+keywords: [JWTForge development, Wrangler, Docusaurus, Cloudflare Workers]
 ---
 
 # Local Development

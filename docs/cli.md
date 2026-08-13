@@ -1,5 +1,7 @@
 ---
 title: CLI
+description: Install and use the JWTForge CLI locally and in CI/CD pipelines with GitHub Actions, Newman, and Postman examples.
+keywords: [JWTForge CLI, CI/CD, GitHub Actions, Postman, Newman]
 ---
 
 # CLI

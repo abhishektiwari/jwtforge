@@ -1,5 +1,7 @@
 ---
 title: Fuzz Mode
+description: Use JWTForge fuzz mode to randomly mutate selected JWT body claims and supported header fields for robustness testing.
+keywords: [JWT fuzzing, claim fuzzing, header fuzzing, robustness testing]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

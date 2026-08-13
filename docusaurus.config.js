@@ -3,10 +3,13 @@
 const lightCodeTheme = require('prism-react-renderer').themes.github;
 const darkCodeTheme = require('prism-react-renderer').themes.dracula;
 
+const siteDescription =
+  'JWTForge: A JWT Vending Service for Testing, Fuzzing, and Security Research of OAuth2/OIDC Implementations.';
+
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'JWTForge',
-  tagline: 'A JWT Vending Service for Testing, Fuzzing, and Security Research of OAuth2/OIDC Implementations.',
+  tagline: siteDescription,
   favicon: 'img/favicon.svg',
   url: 'https://jwtforge.dev',
   baseUrl: '/',
@@ -21,6 +24,30 @@ const config = {
       onBrokenMarkdownLinks: 'warn',
     },
   },
+  headTags: [
+    {
+      tagName: 'script',
+      attributes: {
+        type: 'application/ld+json',
+      },
+      innerHTML: JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'SoftwareApplication',
+        name: 'JWTForge',
+        applicationCategory: 'DeveloperApplication',
+        operatingSystem: 'Cloudflare Workers, Node.js',
+        description: siteDescription,
+        url: 'https://jwtforge.dev',
+        codeRepository: 'https://github.com/abhishektiwari/jwtforge',
+        image: 'https://jwtforge.dev/img/jwtforge-social-card.svg',
+        offers: {
+          '@type': 'Offer',
+          price: '0',
+          priceCurrency: 'USD',
+        },
+      }),
+    },
+  ],
 
   presets: [
     [
@@ -45,10 +72,51 @@ const config = {
     ],
   ],
 
+  plugins: [
+    [
+      'docusaurus-plugin-llms',
+      {
+        title: 'JWTForge Documentation',
+        description: siteDescription,
+        docsDir: [{ path: 'docs', routeBasePath: 'docs', label: 'Documentation' }],
+        generateLLMsTxt: true,
+        generateLLMsFullTxt: true,
+        generateMarkdownFiles: true,
+        excludeImports: true,
+        removeDuplicateHeadings: true,
+        includeOrder: [
+          'intro.md',
+          'token-endpoint/*.md',
+          'modes/*.md',
+          'attacks/*.md',
+          'evaluation.md',
+          'cli.md',
+          'reference/*.md',
+          'development.md',
+        ],
+        rootContent:
+          'Use these links for agent-friendly access to JWTForge guides, token endpoint examples, testing modes, attack scenarios, CLI usage, and API reference material.',
+        fullRootContent:
+          'Complete agent-friendly JWTForge documentation bundle covering structured JSON requests, testing modes, attack scenarios, CLI usage, and API reference material.',
+        logLevel: 'normal',
+      },
+    ],
+  ],
+
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       image: 'img/jwtforge-social-card.svg',
+      metadata: [
+        {
+          name: 'keywords',
+          content:
+            'JWT, JSON Web Token, OAuth2, OIDC, OpenID Connect, token testing, JWT fuzzing, security testing, Cloudflare Workers',
+        },
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { property: 'og:type', content: 'website' },
+        { name: 'robots', content: 'index,follow' },
+      ],
       navbar: {
         logo: {
           alt: 'JWTForge',
@@ -82,6 +150,13 @@ const config = {
             items: [
               { label: 'Swagger', to: '/api-reference' },
               { label: 'GitHub', href: 'https://github.com/abhishektiwari/jwtforge' },
+            ],
+          },
+          {
+            title: 'Agents',
+            items: [
+              { label: 'llms.txt', href: 'https://jwtforge.dev/llms.txt' },
+              { label: 'llms-full.txt', href: 'https://jwtforge.dev/llms-full.txt' },
             ],
           },
         ],

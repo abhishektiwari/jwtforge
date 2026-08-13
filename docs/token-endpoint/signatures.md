@@ -1,5 +1,7 @@
 ---
 title: Signatures
+description: Configure JWTForge token signatures, including normal signing, unsigned tokens, literal signatures, and vulnerability-oriented signature behavior.
+keywords: [JWT signature, unsigned JWT, alg none, literal signature, JWTForge]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

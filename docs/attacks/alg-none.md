@@ -1,5 +1,7 @@
 ---
 title: alg none
+description: Generate unsigned JWTs and alg none variants to test algorithm allowlist enforcement in JWT consumers.
+keywords: [alg none, unsigned JWT, JWT algorithm confusion, JWT security]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';

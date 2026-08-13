@@ -1,5 +1,7 @@
 ---
 title: OpenAPI
+description: JWTForge OpenAPI and Swagger reference URLs for trying the token endpoint and inspecting the API contract.
+keywords: [JWTForge OpenAPI, Swagger UI, API reference, token endpoint]
 ---
 
 # OpenAPI and Swagger

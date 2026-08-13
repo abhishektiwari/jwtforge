@@ -1,5 +1,7 @@
 ---
 title: RS/HS Confusion
+description: Test RS256 to HS256 algorithm confusion handling with JWTForge vulnerability presets.
+keywords: [RS256 HS256 confusion, JWT algorithm confusion, CVE-2015-9235, JWT security]
 ---
 
 import DocsTokenExample from '@site/src/components/DocsTokenExample';
