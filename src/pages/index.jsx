@@ -72,7 +72,7 @@ export default function Home() {
             </div>
             <div className={styles.featureGrid}>
               <div className={styles.feature}>
-                <h3>Structured tokens</h3>
+                <h3>Token controls</h3>
                 <p>Generate signed, unsigned, malformed, and literal-signature JWTs using explicit header, body, and signature inputs.</p>
               </div>
               <div className={styles.feature}>

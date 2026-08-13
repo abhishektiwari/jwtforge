@@ -12,7 +12,7 @@ import { handleDiscoveryRequest } from './discovery.js';
 import { parseTokenExchangeRequest } from './tokenexchange.js';
 import { faker } from '@faker-js/faker';
 import { getCompleteGrammar } from './grammar.js';
-import { applyVulnerabilityPreset, normalizeTokenRequest, removeUndefinedFields } from './tokenrequest.js';
+import { applyVulnerabilityPreset, buildJwtHeader, normalizeTokenRequest, parseResponseType } from './tokenrequest.js';
 import { setGrammarFaker } from './grammar-resolver.js';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
@@ -217,12 +217,7 @@ async function createJWT(claims, keyData, headerOverrides = {}, signatureOption 
   const now = Math.floor(Date.now() / 1000);
 
   // JWT Header with optional overrides
-  const header = removeUndefinedFields({
-    alg: keyData.alg,
-    typ: 'JWT',
-    kid: keyData.kid,
-    ...headerOverrides
-  });
+  const header = buildJwtHeader(keyData, headerOverrides);
 
   // JWT Payload with default OIDC/OAuth2 claims
   const payload = {
@@ -517,14 +512,9 @@ async function handleTokenRequest(request, env) {
 
     // Extract response_type from request (OAuth2/OIDC standard)
     // Supported values: "token", "id_token", "id_token token", "token id_token"
-    const responseType = (normalized.options.responseType || 'token').toLowerCase().trim();
-
-    // Parse response_type to determine what tokens to generate
-    const shouldGenerateAccessToken = responseType.includes('token') && !responseType.includes('id_token token') ||
-                                       responseType === 'token' ||
-                                       responseType.includes('token id_token') ||
-                                       responseType.includes('id_token token');
-    const shouldGenerateIdToken = responseType.includes('id_token');
+    const { shouldGenerateAccessToken, shouldGenerateIdToken } = parseResponseType(
+      normalized.options.responseType
+    );
 
     // Extract kty from request, default to RSA/RS256
     const kty = normalized.options.kty || 'RSA';

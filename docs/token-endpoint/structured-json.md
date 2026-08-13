@@ -111,11 +111,14 @@ The `header` object controls JWT header parameters.
 | Field | Description | Default | Example |
 | --- | --- | --- | --- |
 | `alg` | JWT signing algorithm advertised in the header | Active key algorithm, usually `RS256` | `"RS256"`, `"ES256"`, `"none"`, `"nOne"` |
-| `typ` | Token type | `"JWT"` | `"JWT"` |
-| `cty` | Content type for nested or typed JWT payloads | none | `"application/json"`, `"JWT"` |
+| `typ` | Token type | `"JWT"` | `"JWT"`, `"at+jwt"` |
+| `cty` | Content type for nested or typed JWT payloads | none | `"JWT"`, `"application/jwt"` |
 | `kid` | Key identifier | Active signing key ID | `"rsa-key-1"` |
 | `jku` | JWK Set URL reference | none | `"https://example.com/.well-known/jwks.json"` |
 | `jwk` | Embedded public JWK object | none | `{"kty":"RSA","kid":"embedded-rsa-key"}` |
+| `crit` | Critical header parameter names | none | `["exp-ext","custom-policy-id"]` |
+
+Custom header parameters are allowed only when their names are listed in `crit`. JWTForge rejects a `crit` entry if the named header parameter is missing.
 
 ### Unsupported Header Fields
 

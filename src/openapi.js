@@ -2,6 +2,8 @@
  * OpenAPI Specification and Swagger UI for JWTForge
  */
 
+import { openApiTokenExamples } from './token-examples.js';
+
 /**
  * Generate OpenAPI 3.0 specification
  */
@@ -32,7 +34,7 @@ export function getOpenAPISpec(baseUrl) {
         post: {
           tags: ['Token-Endpoint'],
           summary: 'Generate JWT Token',
-          description: 'Generate a signed JWT token with four approaches: (1) Structured JSON payload using header/body/signature, (2) legacy direct JSON payload with flat custom claims, (3) OAuth2 client_credentials grant (RFC 6749, form-encoded with Basic auth), or (4) Token exchange (RFC 8693, form-encoded). Client ID is auto-generated if not provided. **Using Client Credentials from Swagger:** Click "Authorize" (top right), select basicAuth, enter the same value for both username and password (your client_id). Then select `application/x-www-form-urlencoded` content type and fill in the form fields.',
+          description: 'Generate a signed JWT token with JSON payloads using header/body/signature, flat top-level claim payloads for backward compatibility, OAuth2 client_credentials grant (RFC 6749, form-encoded with Basic auth), or token exchange (RFC 8693, form-encoded). Client ID is auto-generated if not provided. **Using Client Credentials from Swagger:** Click "Authorize" (top right), select basicAuth, enter the same value for both username and password (your client_id). Then select `application/x-www-form-urlencoded` content type and fill in the form fields.',
           requestBody: {
             required: true,
             content: {
@@ -61,7 +63,7 @@ export function getOpenAPISpec(baseUrl) {
                     vulnerability: {
                       type: 'string',
                       enum: ['alg_none', 'rs_hs_confusion', 'kid_traversal', 'jku_injection', 'embedded_jwk'],
-                      description: 'Known JWT vulnerability preset. Applies to the structured header/signature model before mode transformations.'
+                      description: 'Known JWT vulnerability preset. Applies to the header/signature model before mode transformations.'
                     },
                     alg_none_variant: {
                       type: 'string',
@@ -88,20 +90,25 @@ export function getOpenAPISpec(baseUrl) {
                     },
                     header: {
                       type: 'object',
-                      description: 'Structured JWT header overrides. Supported fields: alg, typ, cty, kid, jku, jwk. Unsupported and rejected: x5u, x5c, x5t.',
+                      description: 'JWT header overrides. Supported fields: alg, typ, cty, kid, jku, jwk, crit. Custom header parameters are allowed only when their names are listed in crit. Unsupported and rejected: x5u, x5c, x5t.',
                       properties: {
                         alg: { type: 'string', description: 'JWT algorithm header value' },
-                        typ: { type: 'string', description: 'JWT type header value' },
-                        cty: { type: 'string', description: 'JWT content type header value' },
+                        typ: { type: 'string', default: 'JWT', description: 'JWT type header value. Defaults to "JWT" and can be overridden.' },
+                        cty: { type: 'string', description: 'JWT content type header value. Omitted by default; set explicitly for nested JWTs or application-specific content parsing.' },
                         kid: { type: 'string', description: 'JWT key ID header value' },
                         jku: { type: 'string', description: 'JWK Set URL header value' },
-                        jwk: { type: 'object', description: 'Embedded JWK header value' }
+                        jwk: { type: 'object', description: 'Embedded JWK header value' },
+                        crit: {
+                          type: 'array',
+                          items: { type: 'string' },
+                          description: 'Critical header parameter names. Each name listed here must also be present as a header parameter.'
+                        }
                       },
-                      additionalProperties: false
+                      additionalProperties: true
                     },
                     body: {
                       type: 'object',
-                      description: 'Structured JWT payload claims. Supports the same standard OIDC/OAuth2 and custom claims as the legacy flat JSON model.',
+                      description: 'JWT payload claims. Supports standard OIDC/OAuth2 and custom claims.',
                       additionalProperties: true
                     },
                     signature: {
@@ -109,20 +116,20 @@ export function getOpenAPISpec(baseUrl) {
                         { type: 'boolean', enum: [false] },
                         { type: 'string' }
                       ],
-                      description: 'Structured signature control. Omit to sign normally, set false for an unsigned trailing-dot token, or provide a literal signature segment string.'
+                      description: 'JWT signature control. Omit to sign normally, set false for an unsigned trailing-dot token, or provide a literal signature segment string.'
                     },
                     header_alg: {
                       type: 'string',
-                      description: 'Legacy JWT header algorithm override. In fuzz mode, gets fuzzed to algorithm confusion attacks (none, None, HS256, etc.). Prefer structured header.alg for new requests.'
+                      description: 'Backward-compatible JWT header algorithm override. In fuzz mode, gets fuzzed to algorithm confusion attacks (none, None, HS256, etc.). Prefer header.alg for new requests.'
                     },
                     header_kid: {
                       type: 'string',
-                      description: 'Legacy JWT header key ID override. In fuzz/malicious modes, gets transformed to BLNS patterns or injection payloads. Prefer structured header.kid for new requests.'
+                      description: 'Backward-compatible JWT header key ID override. In fuzz/malicious modes, gets transformed to BLNS patterns or injection payloads. Prefer header.kid for new requests.'
                     },
                     sig: {
                       type: 'boolean',
                       default: true,
-                      description: 'Legacy signature switch. Set to false to generate unsigned tokens. Prefer structured signature for new requests.'
+                      description: 'Backward-compatible signature switch. Set to false to generate unsigned tokens. Prefer signature for new requests.'
                     },
                     iss: {
                       type: 'string',
@@ -207,179 +214,7 @@ export function getOpenAPISpec(baseUrl) {
                   },
                   additionalProperties: true
                 },
-                examples: {
-                  structured: {
-                    summary: 'Structured token request',
-                    value: {
-                      header: {
-                        alg: 'RS256',
-                        typ: 'JWT',
-                        cty: 'application/json',
-                        kid: 'rsa-key-1',
-                        jku: 'https://example.com/.well-known/jwks.json'
-                      },
-                      body: {
-                        sub: 'user123',
-                        scope: 'openid profile',
-                        roles: ['admin']
-                      }
-                    }
-                  },
-                  accessToken: {
-                    summary: 'Legacy access token (response_type=token)',
-                    value: {
-                      response_type: 'token',
-                      sub: 'user123',
-                      scope: 'read write',
-                      aud: 'https://api.example.com'
-                    }
-                  },
-                  idToken: {
-                    summary: 'ID token (response_type=id_token)',
-                    value: {
-                      response_type: 'id_token',
-                      sub: 'user123',
-                      name: 'John Doe',
-                      email: 'john@example.com',
-                      email_verified: true,
-                      aud: 'my-client-app',
-                      nonce: 'random-nonce-12345'
-                    }
-                  },
-                  both: {
-                    summary: 'Both tokens (response_type=id_token token)',
-                    value: {
-                      response_type: 'id_token token',
-                      sub: 'user123',
-                      name: 'John Doe',
-                      email: 'john@example.com',
-                      email_verified: true,
-                      scope: 'openid profile email',
-                      aud: 'my-client-app',
-                      nonce: 'random-nonce-67890'
-                    }
-                  },
-                  ec: {
-                    summary: 'EC (ES256) token',
-                    value: {
-                      kty: 'EC',
-                      sub: 'user@example.com',
-                      name: 'Jane Smith'
-                    }
-                  },
-                  custom: {
-                    summary: 'Token with custom claims',
-                    value: {
-                      sub: 'user123',
-                      name: 'Admin User',
-                      roles: ['admin', 'user'],
-                      permissions: ['read', 'write', 'delete'],
-                      tenant_id: 'tenant-abc-123'
-                    }
-                  },
-                  oidc: {
-                    summary: 'Full OIDC profile',
-                    value: {
-                      sub: '12345678',
-                      name: 'John Doe',
-                      given_name: 'John',
-                      family_name: 'Doe',
-                      email: 'john@example.com',
-                      email_verified: true,
-                      picture: 'https://example.com/avatar.jpg',
-                      locale: 'en-US'
-                    }
-                  },
-                  fuzz: {
-                    summary: 'Fuzz mode (random fuzzed values)',
-                    value: {
-                      mode: 'fuzz',
-                      sub: 'user123',
-                      name: 'Test User',
-                      email: 'test@example.com',
-                      roles: ['user']
-                    }
-                  },
-                  malicious: {
-                    summary: 'Malicious mode with SQL injection (security testing)',
-                    value: {
-                      mode: 'malicious',
-                      malicious_category: 'sql_injection',
-                      sub: 'user123',
-                      name: 'Test User',
-                      email: 'test@example.com'
-                    }
-                  },
-                  grammar: {
-                    summary: 'Grammar mode (FBNF patterns - injection category)',
-                    value: {
-                      mode: 'grammar',
-                      grammar_category: 'injection',
-                      sub: 'user123',
-                      email: 'test@example.com',
-                      scope: 'openid profile'
-                    }
-                  },
-                  fuzzWithExclusions: {
-                    summary: 'Fuzz mode with exclusions (infinitely valid token)',
-                    value: {
-                      mode: 'fuzz',
-                      sub: 'user123',
-                      name: 'Test User',
-                      email: 'test@example.com',
-                      roles: ['user'],
-                      exclude: ['exp', 'nbf', 'iat']
-                    }
-                  },
-                  algConfusion: {
-                    summary: 'Structured algorithm confusion attack',
-                    value: {
-                      vulnerability: 'rs_hs_confusion',
-                      body: {
-                        sub: 'user123',
-                        name: 'Test User'
-                      }
-                    }
-                  },
-                  cve20152951: {
-                    summary: 'alg=none signature bypass',
-                    value: {
-                      vulnerability: 'alg_none',
-                      alg_none_variant: 'nOne',
-                      body: {
-                        sub: 'user123',
-                        roles: ['admin']
-                      }
-                    }
-                  },
-                  cve201610555: {
-                    summary: 'Legacy RS/HS256 key confusion',
-                    value: {
-                      sub: 'user123',
-                      roles: ['admin'],
-                      header_alg: 'HS256'
-                    }
-                  },
-                  cve20180114: {
-                    summary: 'Structured key injection (kid parameter)',
-                    value: {
-                      vulnerability: 'kid_traversal',
-                      body: {
-                        sub: 'user123'
-                      }
-                    }
-                  },
-                  cve202028042: {
-                    summary: 'Structured null signature',
-                    value: {
-                      body: {
-                        sub: 'user123',
-                        roles: ['admin']
-                      },
-                      signature: false
-                    }
-                  }
-                }
+                examples: openApiTokenExamples
               },
               'application/x-www-form-urlencoded': {
                 schema: {
