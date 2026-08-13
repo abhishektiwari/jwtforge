@@ -19,6 +19,29 @@ import { setGrammarFaker } from './grammar-resolver.js';
 const memoryCache = new Map();
 setGrammarFaker(faker);
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+};
+
+function jsonHeaders(extraHeaders = {}) {
+  return {
+    'Content-Type': 'application/json',
+    ...CORS_HEADERS,
+    ...extraHeaders,
+  };
+}
+
+async function maybeServeStaticAsset(request, env) {
+  if (!env?.ASSETS) {
+    return null;
+  }
+
+  const response = await env.ASSETS.fetch(request);
+  return response.status === 404 ? null : response;
+}
+
 /**
  * Get or create key data from storage backend (KV, Durable Objects, or memory cache)
  * Returns the current signing key (with automatic rotation)
@@ -314,7 +337,7 @@ async function handleTokenRequest(request, env) {
       JSON.stringify({ error: 'Method not allowed. Use POST.' }),
       {
         status: 405,
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders()
       }
     );
   }
@@ -375,7 +398,7 @@ async function handleTokenRequest(request, env) {
 
           return new Response(JSON.stringify(response), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' }
+            headers: jsonHeaders()
           });
         } catch (error) {
           return new Response(
@@ -383,7 +406,7 @@ async function handleTokenRequest(request, env) {
               error: 'server_error',
               error_description: error.message
             }),
-            { status: 500, headers: { 'Content-Type': 'application/json' } }
+            { status: 500, headers: jsonHeaders() }
           );
         }
       }
@@ -395,7 +418,7 @@ async function handleTokenRequest(request, env) {
             error: 'unsupported_grant_type',
             error_description: 'Supported grant types: client_credentials, urn:ietf:params:oauth:grant-type:token-exchange'
           }),
-          { status: 400, headers: { 'Content-Type': 'application/json' } }
+          { status: 400, headers: jsonHeaders() }
         );
       }
 
@@ -408,7 +431,7 @@ async function handleTokenRequest(request, env) {
               error: 'invalid_client',
               error_description: 'Basic authorization required for client_credentials grant'
             }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
+            { status: 401, headers: jsonHeaders() }
           );
         }
 
@@ -423,7 +446,7 @@ async function handleTokenRequest(request, env) {
                 error: 'invalid_client',
                 error_description: 'Invalid client credentials'
               }),
-              { status: 401, headers: { 'Content-Type': 'application/json' } }
+              { status: 401, headers: jsonHeaders() }
             );
           }
 
@@ -434,7 +457,7 @@ async function handleTokenRequest(request, env) {
                 error: 'invalid_client',
                 error_description: 'Invalid client_id format. Must be alphanumeric, underscores, and/or hyphens, up to 50 characters'
               }),
-              { status: 401, headers: { 'Content-Type': 'application/json' } }
+              { status: 401, headers: jsonHeaders() }
             );
           }
 
@@ -445,7 +468,7 @@ async function handleTokenRequest(request, env) {
               error: 'invalid_client',
               error_description: 'Invalid authorization header'
             }),
-            { status: 401, headers: { 'Content-Type': 'application/json' } }
+            { status: 401, headers: jsonHeaders() }
           );
         }
       }
@@ -464,7 +487,7 @@ async function handleTokenRequest(request, env) {
           error: 'invalid_request',
           error_description: 'Content-Type must be application/json or application/x-www-form-urlencoded'
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: jsonHeaders() }
       );
     }
 
@@ -475,7 +498,7 @@ async function handleTokenRequest(request, env) {
           error: 'unsupported_grant_type',
           error_description: 'Only client_credentials grant type is supported'
         }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
+        { status: 400, headers: jsonHeaders() }
       );
     }
 
@@ -611,7 +634,7 @@ async function handleTokenRequest(request, env) {
       JSON.stringify(response),
       {
         status: 200,
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders()
       }
     );
   } catch (error) {
@@ -622,7 +645,7 @@ async function handleTokenRequest(request, env) {
       }),
       {
         status: 400,
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders()
       }
     );
   }
@@ -651,8 +674,7 @@ async function handleJWKSRequest(env) {
     return new Response(JSON.stringify(jwks, null, 2), {
       status: 200,
       headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
+        ...jsonHeaders(),
         'Cache-Control': 'public, max-age=1800' // 30 minutes cache
       }
     });
@@ -661,7 +683,7 @@ async function handleJWKSRequest(env) {
       JSON.stringify({ error: 'Failed to generate JWKS', message: error.message }),
       {
         status: 500,
-        headers: { 'Content-Type': 'application/json' }
+        headers: jsonHeaders()
       }
     );
   }
@@ -678,11 +700,7 @@ export default {
     // Handle CORS preflight
     if (request.method === 'OPTIONS') {
       return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-        }
+        headers: CORS_HEADERS
       });
     }
 
@@ -696,9 +714,18 @@ export default {
     } else if (path === '/.well-known/openid-configuration') {
       return handleDiscoveryRequest(request, env);
     } else if (path === '/openapi.json' || path === '/swagger.json') {
-      return handleOpenAPIRequest(request);
-    } else if (path === '/') {
-      return handleRootRequest(request);
+      return handleOpenAPIRequest(request, env);
+    } else if (path === '/swagger' || path === '/swagger/') {
+      return handleRootRequest(request, env);
+    }
+
+    const assetResponse = await maybeServeStaticAsset(request, env);
+    if (assetResponse) {
+      return assetResponse;
+    }
+
+    if (path === '/') {
+      return handleRootRequest(request, env);
     }
 
     return new Response('Not Found', { status: 404 });

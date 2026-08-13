@@ -1,0 +1,41 @@
+:root {
+  --jwtforge-amber: #EF9F27;
+  --jwtforge-coral: #E2553A;
+  --jwtforge-violet: #7F77DD;
+  --jwtforge-steel: #98A1AE;
+  --jwtforge-steel-dark: #7E8794;
+  --jwtforge-tile: #141821;
+  --ifm-color-primary: #7F77DD;
+  --ifm-color-primary-dark: #6d64d8;
+  --ifm-color-primary-darker: #5d54ce;
+  --ifm-color-primary-darkest: #4a42ac;
+  --ifm-color-primary-light: #928be3;
+  --ifm-color-primary-lighter: #a5a0e9;
+  --ifm-color-primary-lightest: #c6c2f2;
+  --ifm-code-font-size: 95%;
+  --ifm-border-radius: 8px;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #EF9F27;
+  --ifm-color-primary-dark: #df8e11;
+  --ifm-color-primary-darker: #c77e0f;
+  --ifm-color-primary-darkest: #a6680c;
+  --ifm-color-primary-light: #f1ad49;
+  --ifm-color-primary-lighter: #f4bf73;
+  --ifm-color-primary-lightest: #f8d7aa;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.navbar__logo {
+  height: 36px;
+}
+
+.navbar__logo img {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}

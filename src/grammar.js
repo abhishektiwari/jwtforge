@@ -37,6 +37,7 @@ export const headerGrammar = {
       { type: 'attack_string', value: 'none', tags: ['algorithm-confusion', 'unsigned'] },
       { type: 'attack_string', value: 'None', tags: ['algorithm-confusion', 'case-bypass'] },
       { type: 'attack_string', value: 'NONE', tags: ['algorithm-confusion', 'case-bypass'] },
+      { type: 'attack_string', value: 'nOne', tags: ['algorithm-confusion', 'case-bypass'] },
       { type: 'attack_string', value: 'nOnE', tags: ['algorithm-confusion', 'case-bypass'] },
     ],
     invalid: ['', 'invalid', 'RSA256', 'HMAC256', null, 'NONE256', 'HASH256'],

@@ -1,0 +1,71 @@
+---
+title: OIDC Scopes
+---
+
+import DocsTokenExample from '@site/src/components/DocsTokenExample';
+
+# OIDC Scopes
+
+JWTForge can populate common OIDC claims from the `scope` value. This is mainly useful in `fake` mode, where Faker generates realistic-looking user data.
+
+```json
+{
+  "mode": "fake",
+  "body": {
+    "sub": "user123",
+    "scope": "openid profile email address phone"
+  }
+}
+```
+
+<DocsTokenExample
+  request={{
+    mode: 'fake',
+    body: {
+      sub: 'user123',
+      scope: 'openid profile email address phone',
+    },
+  }}
+/>
+
+## Scope Mapping
+
+| Scope | Claims Included | Example Data |
+| --- | --- | --- |
+| `openid` | Base JWT claims such as `sub`, `iss`, `aud`, `exp`, `iat`, `nbf`, `jti` | Base claims are always present |
+| `profile` | `name`, `given_name`, `family_name`, `middle_name`, `nickname`, `preferred_username`, `profile`, `picture`, `website`, `gender`, `birthdate`, `zoneinfo`, `locale`, `updated_at` | `Jane Smith`, `jane.smith`, `https://example.com/avatar.jpg` |
+| `email` | `email`, `email_verified` | `jane.smith@example.com`, `true` |
+| `address` | `address` object with `street_address`, `locality`, `region`, `postal_code`, `country` | `{"street_address":"123 Main St","locality":"Anytown","region":"CA","postal_code":"12345","country":"US"}` |
+| `phone` | `phone_number`, `phone_number_verified` | `+1-555-555-5555`, `true` |
+
+## Structured Request Example
+
+```json
+{
+  "mode": "fake",
+  "response_type": "id_token token",
+  "body": {
+    "sub": "user123",
+    "scope": "openid profile email",
+    "nonce": "nonce-123"
+  }
+}
+```
+
+<DocsTokenExample
+  request={{
+    mode: 'fake',
+    response_type: 'id_token token',
+    body: {
+      sub: 'user123',
+      scope: 'openid profile email',
+      nonce: 'nonce-123',
+    },
+  }}
+/>
+
+## Notes
+
+- Scope-derived claims are generated only where JWTForge has scope logic for that claim family.
+- Explicit claims in `body` override generated defaults.
+- In non-`fake` modes, claims may be fuzzed, replaced with malicious values, or selected from grammar rules.

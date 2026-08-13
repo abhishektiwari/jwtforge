@@ -26,7 +26,22 @@ example.db
 *~
 
 .npmrc
+
+# Build artifacts and local caches
+build/
+dist/
+.cache/
+.turbo/
+.vite/
+
+# Docusaurus
+.docusaurus/
+
+# Coverage
 coverage/
+
+# Local package builds
+*.tgz
 
 # Test results
 test-results*

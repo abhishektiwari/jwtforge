@@ -1,0 +1,128 @@
+.example {
+  margin: 1rem 0 1.5rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 8px;
+  background: var(--ifm-background-surface-color);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  padding: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.button,
+.secondaryButton {
+  min-height: 36px;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.5rem 0.8rem;
+  transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+.button {
+  background: var(--jwtforge-violet);
+  color: #ffffff;
+}
+
+.button:hover:not(:disabled),
+.button:focus-visible:not(:disabled) {
+  background: var(--jwtforge-amber);
+  color: var(--jwtforge-tile);
+  transform: translateY(-1px);
+}
+
+.secondaryButton {
+  background: var(--jwtforge-steel);
+  color: var(--jwtforge-tile);
+}
+
+.secondaryButton:hover,
+.secondaryButton:focus-visible {
+  background: var(--jwtforge-coral);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.panel {
+  min-width: 0;
+}
+
+.decodedPanel {
+  min-width: 0;
+  border-top: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.panel + .panel {
+  border-left: 1px solid var(--ifm-color-emphasis-300);
+}
+
+.panelHeader {
+  border-bottom: 1px solid var(--ifm-color-emphasis-300);
+  background: var(--ifm-color-emphasis-100);
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.panel pre,
+.decodedPanel pre {
+  min-height: 180px;
+  max-height: 320px;
+  margin: 0;
+  overflow: auto;
+  background: transparent;
+  padding: 0.75rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.decodedPanel pre {
+  min-height: 150px;
+}
+
+.error {
+  border-top: 1px solid var(--jwtforge-coral);
+  background: color-mix(in srgb, var(--jwtforge-coral) 18%, white);
+  color: var(--jwtforge-tile);
+  padding: 0.65rem 0.75rem;
+}
+
+@media (max-width: 996px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .panel + .panel {
+    border-top: 1px solid var(--ifm-color-emphasis-300);
+    border-left: 0;
+  }
+}

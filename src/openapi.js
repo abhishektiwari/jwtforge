@@ -10,18 +10,11 @@ export function getOpenAPISpec(baseUrl) {
     openapi: '3.0.3',
     info: {
       title: 'JWTForge',
-      description: `JWT Token Vending Service for Testing
-
-Generate JWT tokens with standard OIDC/OAuth2 and custom claims for your development and testing needs. 🚨🚨 Do not use in production environments 🚨🚨.  Use it for **fuzzing**, **end-to-end**, **penetration testing** of OIDC/OAuth2 applications and services. 
-
-Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
-
-[![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)`,
-
+      description: `JWT Token Vending Service for Testing`,
       version: '0.0.1',
       contact: {
         name: 'JWTForge',
-        url: 'http://jwtforge.dev'
+        url: 'https://jwtforge.dev'
       },
       license: {
         name: 'MIT',
@@ -69,6 +62,12 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                       type: 'string',
                       enum: ['alg_none', 'rs_hs_confusion', 'kid_traversal', 'jku_injection', 'embedded_jwk'],
                       description: 'Known JWT vulnerability preset. Applies to the structured header/signature model before mode transformations.'
+                    },
+                    alg_none_variant: {
+                      type: 'string',
+                      enum: ['none', 'None', 'NONE', 'nOne', 'nOnE'],
+                      default: 'none',
+                      description: 'Optional with vulnerability=alg_none. Sets the exact case variation for header.alg. Any case variation of "none" is accepted.'
                     },
                     malicious_category: {
                       type: 'string',
@@ -346,6 +345,7 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
                     summary: 'alg=none signature bypass',
                     value: {
                       vulnerability: 'alg_none',
+                      alg_none_variant: 'nOne',
                       body: {
                         sub: 'user123',
                         roles: ['admin']
@@ -843,16 +843,26 @@ Follow or Fork [JWTForge on Github](https://github.com/abhishektiwari/jwtforge).
 /**
  * Handle OpenAPI spec endpoint
  */
-export function handleOpenAPIRequest(request) {
+function getIssuerBaseUrl(request, env) {
+  if (env?.ISSUER) {
+    return env.ISSUER.replace(/\/$/, '');
+  }
+
   const url = new URL(request.url);
-  const baseUrl = `${url.protocol}//${url.host}`;
+  return `${url.protocol}//${url.host}`;
+}
+
+export function handleOpenAPIRequest(request, env) {
+  const baseUrl = getIssuerBaseUrl(request, env);
   const spec = getOpenAPISpec(baseUrl);
 
   return new Response(JSON.stringify(spec, null, 2), {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*'
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization'
     }
   });
 }
@@ -860,9 +870,8 @@ export function handleOpenAPIRequest(request) {
 /**
  * Handle root endpoint - Swagger UI
  */
-export function handleRootRequest(request) {
-  const url = new URL(request.url);
-  const baseUrl = `${url.protocol}//${url.host}`;
+export function handleRootRequest(request, env) {
+  const baseUrl = getIssuerBaseUrl(request, env);
 
   const html = `
 <!DOCTYPE html>

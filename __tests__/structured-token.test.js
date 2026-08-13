@@ -77,6 +77,47 @@ describe('Structured vulnerability presets', () => {
     expect(normalized.signature).toBe(false);
   });
 
+  test('alg_none accepts configured case variations', () => {
+    const variants = ['None', 'NONE', 'nOne'];
+
+    for (const variant of variants) {
+      const normalized = normalizeTokenRequest({
+        vulnerability: 'alg_none',
+        alg_none_variant: variant,
+        body: { sub: 'admin' }
+      });
+
+      applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } });
+
+      expect(normalized.header.alg).toBe(variant);
+      expect(normalized.signature).toBe(false);
+    }
+  });
+
+  test('alg_none can use explicit structured header alg variation', () => {
+    const normalized = normalizeTokenRequest({
+      vulnerability: 'alg_none',
+      header: { alg: 'nOnE' },
+      body: { sub: 'admin' }
+    });
+
+    applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } });
+
+    expect(normalized.header.alg).toBe('nOnE');
+    expect(normalized.signature).toBe(false);
+  });
+
+  test('alg_none rejects non-none variants', () => {
+    const normalized = normalizeTokenRequest({
+      vulnerability: 'alg_none',
+      alg_none_variant: 'HS256',
+      body: { sub: 'admin' }
+    });
+
+    expect(() => applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } }))
+      .toThrow('alg_none_variant must be a case variation of "none"');
+  });
+
   test('rs_hs_confusion sets HS256 header algorithm', () => {
     const normalized = normalizeTokenRequest({
       vulnerability: 'rs_hs_confusion',

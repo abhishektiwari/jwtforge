@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#141821"/>
+  <rect x="80" y="90" width="1040" height="450" rx="24" fill="#ffffff" stroke="#7E8794"/>
+  <text x="130" y="185" font-family="Arial, sans-serif" font-size="64" font-weight="700"><tspan fill="#141821">JWT</tspan><tspan fill="#EF9F27">Forge</tspan></text>
+  <text x="130" y="245" fill="#7E8794" font-family="Arial, sans-serif" font-size="32">Structured JWT generation, fuzzing, and attack-mode testing</text>
+  <rect x="130" y="310" width="260" height="64" rx="10" fill="#7F77DD"/>
+  <text x="160" y="352" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">header</text>
+  <rect x="430" y="310" width="260" height="64" rx="10" fill="#E2553A"/>
+  <text x="460" y="352" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">body</text>
+  <rect x="730" y="310" width="260" height="64" rx="10" fill="#EF9F27"/>
+  <text x="760" y="352" fill="#ffffff" font-family="Arial, sans-serif" font-size="28" font-weight="700">signature</text>
+</svg>

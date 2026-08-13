@@ -16,6 +16,7 @@ const METADATA_FIELDS = [
   'header',
   'body',
   'vulnerability',
+  'alg_none_variant',
   'version'
 ];
 
@@ -140,12 +141,21 @@ export function normalizeTokenRequest(requestData = {}) {
       grammarCategory: getOption(requestData, optionBody, 'grammar_category', null),
       responseType: getOption(requestData, optionBody, 'response_type', 'token'),
       kty: getOption(requestData, optionBody, 'kty', 'RSA'),
-      vulnerability: getOption(requestData, optionBody, 'vulnerability', null)
+      vulnerability: getOption(requestData, optionBody, 'vulnerability', null),
+      algNoneVariant: getOption(requestData, optionBody, 'alg_none_variant', undefined)
     },
     header: normalizeHeader(requestData, structured),
     body: removeUndefinedFields(body),
     signature: normalizeSignature(requestData, structured)
   };
+}
+
+function resolveAlgNoneVariant(normalized) {
+  const variant = normalized.options.algNoneVariant ?? normalized.header.alg ?? 'none';
+  if (typeof variant !== 'string' || variant.toLowerCase() !== 'none') {
+    throw new Error('alg_none_variant must be a case variation of "none"');
+  }
+  return variant;
 }
 
 export function applyVulnerabilityPreset(normalized, keyData) {
@@ -154,7 +164,7 @@ export function applyVulnerabilityPreset(normalized, keyData) {
     case undefined:
       return normalized;
     case 'alg_none':
-      normalized.header.alg = 'none';
+      normalized.header.alg = resolveAlgNoneVariant(normalized);
       normalized.signature = false;
       return normalized;
     case 'rs_hs_confusion':
