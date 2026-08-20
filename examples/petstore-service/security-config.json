@@ -1,0 +1,12 @@
+{
+  "claims": {
+    "tenant_id": "test-tenant"
+  },
+  "operations": {
+    "listPets": {
+      "claims": {
+        "tenant_id": "test-tenant"
+      }
+    }
+  }
+}

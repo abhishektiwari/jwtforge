@@ -91,6 +91,7 @@ const config = {
           'attacks/*.md',
           'evaluation.md',
           'cli.md',
+          'openapi-pen-test-generator.md',
           'reference/*.md',
           'development.md',
         ],
@@ -126,6 +127,11 @@ const config = {
         items: [
           { to: '/', label: 'Try', position: 'left' },
           { to: '/docs/intro', label: 'Docs', position: 'left' },
+          {
+            to: '/docs/openapi-pen-test-generator',
+            label: 'OpenAPI Pen Test Generator',
+            position: 'left',
+          },
           { to: '/api-reference', label: 'Swagger', position: 'left' },
           {
             href: 'https://github.com/abhishektiwari/jwtforge',
@@ -143,6 +149,10 @@ const config = {
               { label: 'Overview', to: '/docs/intro' },
               { label: 'Structured JSON', to: '/docs/token-endpoint/structured-json' },
               { label: 'Grammar Templates', to: '/docs/modes/grammar' },
+              {
+                label: 'OpenAPI Pen Test Generator',
+                to: '/docs/openapi-pen-test-generator',
+              },
             ],
           },
           {

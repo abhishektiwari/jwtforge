@@ -40,6 +40,7 @@ const sidebars = {
         'reference/openapi',
       ],
     },
+    'openapi-pen-test-generator',
   ],
 };
 

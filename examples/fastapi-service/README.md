@@ -19,7 +19,7 @@ This example demonstrates:
 ### Using Make (Recommended)
 
 ```bash
-cd example
+cd examples/fastapi-service
 
 # Complete setup (creates .env, installs dependencies)
 make setup
@@ -36,7 +36,7 @@ make run
 If you prefer not to use Make:
 
 ```bash
-cd example
+cd examples/fastapi-service
 
 # 1. Create environment file
 cp .env.example .env

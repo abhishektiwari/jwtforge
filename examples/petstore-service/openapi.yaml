@@ -1,0 +1,310 @@
+openapi: 3.0.3
+x-service-source: examples/petstore-service/openapi.yaml
+info:
+  title: JWTForge Example Pet Store API
+  version: 1.0.0
+  description: |
+    A small Express service used as a local target for the JWTForge OpenAPI
+    pen-test generator. The service validates JWTs against JWTForge JWKS and
+    enforces OAuth2 scopes plus application roles.
+servers:
+  - url: http://localhost:8000
+    description: Local Express example
+tags:
+  - name: health
+  - name: pets
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT issued by JWTForge.
+    oauth:
+      type: oauth2
+      description: JWTForge client-credentials-compatible test issuer.
+      flows:
+        clientCredentials:
+          tokenUrl: http://localhost:8787/token
+          scopes:
+            pets:read: Read pet records
+            pets:write: Create and update pet records
+            pets:delete: Delete pet records
+  schemas:
+    Pet:
+      type: object
+      required: [id, name, species, status]
+      properties:
+        id:
+          type: string
+          example: pet-001
+        name:
+          type: string
+          minLength: 1
+          example: Fluffy
+        species:
+          type: string
+          example: cat
+        status:
+          type: string
+          enum: [available, pending, sold]
+          example: available
+        tags:
+          type: array
+          items:
+            type: string
+          example: [indoor, vaccinated]
+        tenant_id:
+          type: string
+          example: example-tenant
+    NewPet:
+      type: object
+      required: [name, species]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          example: Fluffy
+        species:
+          type: string
+          example: cat
+        status:
+          type: string
+          enum: [available, pending, sold]
+          default: available
+        tags:
+          type: array
+          items:
+            type: string
+          example: [indoor]
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+          example: insufficient_scope
+        message:
+          type: string
+          example: The token does not include pets:write.
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unauthorized:
+      description: Missing or invalid JWT
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Forbidden:
+      description: JWT is valid but lacks required privilege
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    NotFound:
+      description: Resource was not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: healthCheck
+      summary: Check service health
+      security: []
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status, service]
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  service:
+                    type: string
+                    example: petstore-example
+  /pets:
+    get:
+      tags: [pets]
+      operationId: listPets
+      summary: List pets
+      security:
+        - oauth: [pets:read]
+      parameters:
+        - name: status
+          in: query
+          description: Filter by pet status.
+          required: false
+          schema:
+            type: string
+            enum: [available, pending, sold]
+        - name: limit
+          in: query
+          description: Maximum number of pets to return.
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Pet list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Pet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [pets]
+      operationId: createPet
+      summary: Create a pet
+      security:
+        - oauth: [pets:write]
+      x-required-roles: [pet-editor]
+      x-jwt-claims:
+        tenant_id: example-tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+      responses:
+        '201':
+          description: Pet created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /pets/{petId}:
+    parameters:
+      - name: petId
+        in: path
+        required: true
+        description: Pet identifier.
+        schema:
+          type: string
+          example: pet-001
+    get:
+      tags: [pets]
+      operationId: getPet
+      summary: Get one pet
+      security:
+        - oauth: [pets:read]
+      responses:
+        '200':
+          description: Pet record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [pets]
+      operationId: updatePet
+      summary: Update a pet
+      security:
+        - oauth: [pets:write]
+      x-required-roles: [pet-editor]
+      x-jwt-claims:
+        tenant_id: example-tenant
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewPet'
+      responses:
+        '200':
+          description: Pet updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Pet'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [pets]
+      operationId: deletePet
+      summary: Delete a pet
+      security:
+        - oauth: [pets:delete]
+      x-required-roles: [pet-admin]
+      responses:
+        '204':
+          description: Pet deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /admin/pets/reseed:
+    post:
+      tags: [pets]
+      operationId: reseedPets
+      summary: Restore the example data set
+      description: Administrative endpoint used to make repeated local test runs deterministic.
+      security:
+        - oauth: [pets:write]
+      x-required-roles: [pet-admin]
+      responses:
+        '200':
+          description: Data reset
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 3
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /openapi.json:
+    get:
+      tags: [health]
+      operationId: getOpenApiDocument
+      summary: Get this OpenAPI document
+      security: []
+      responses:
+        '200':
+          description: OpenAPI document
+          content:
+            application/json:
+              schema:
+                type: object
