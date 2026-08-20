@@ -1,0 +1,23 @@
+digraph researcher_workflow {
+    fontname="Helvetica,Arial,sans-serif"
+    node [fontname="Helvetica,Arial,sans-serif", style=filled]
+    edge [fontname="Helvetica,Arial,sans-serif"]
+    rankdir=TB;
+
+    start [label="Security Testing Engagement", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    setup [label="Setup JWTForge\n(Local or Remote)", shape=box, fillcolor="#FCE4EC"]
+    design [label="Design Test Scenarios\n(Select Adversarial Payload Categories)", shape=box, fillcolor="#FFF4E6"]
+    payload [label="Generate Adversarial Tokens\n(injection/fuzz/alg confusion/grammar)", shape=box, fillcolor="#FFF4E6"]
+    postman_test [label="Execute Test Collections\n(Against Target APIs)", shape=box, fillcolor="#E8F5E9"]
+    analyze [label="Analyze Responses\n(Identify Vulnerabilities, Error Messages, Timing)", shape=box, fillcolor="#E8F5E9"]
+    document [label="Document Findings\n(Generate Report)", shape=box, fillcolor="#F3E5F5"]
+    disclose [label="Responsible Disclosure", shape=box, fillcolor="#E0F2F1", style="filled,rounded"]
+
+    start -> setup
+    setup -> design
+    design -> payload
+    payload -> postman_test
+    postman_test -> analyze
+    analyze -> document
+    document -> disclose
+}
