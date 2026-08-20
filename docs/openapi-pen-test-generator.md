@@ -1,4 +1,11 @@
-# OpenAPI JWT Pen Testing
+---
+title: OpenAPI Pen Test Generator
+description: Generate or directly run authentication, authorization, and known JWT vulnerability tests from an OpenAPI specification.
+slug: /openapi-pen-test-generator
+keywords: [OpenAPI Pen Test Generator, JWT penetration testing, API security testing, Postman, Newman]
+---
+
+# OpenAPI Pen Test Generator
 
 JWTForge can analyze an OpenAPI JSON or YAML document, infer JWT security requirements, export Postman collections, or execute the generated test plan directly.
 

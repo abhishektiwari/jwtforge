@@ -6,7 +6,7 @@ A lightweight JWT token vending service for testing purposes, deployable on Clou
 
 [![Deploy to Cloudflare Workers](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge)
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
 ![Cloudflare Workers](https://img.shields.io/badge/Cloudflare-Workers-orange.svg)
 ![Workers KV](https://img.shields.io/badge/Storage-Workers%20KV%20(Default)-blue.svg)
 ![Durable Objects](https://img.shields.io/badge/Storage-Durable%20Objects%20(Optional)-green.svg)
@@ -23,7 +23,7 @@ A lightweight JWT token vending service for testing purposes, deployable on Clou
 - Provides `fake`, `fuzz`, `malicious`, and `grammar` testing modes.
 - Supports known JWT attack presets such as `alg_none`, RS/HS confusion, `kid` traversal, `jku` injection, and embedded JWK.
 - Provides OIDC discovery, JWKS, token introspection, OAuth2 client credentials, and RFC 8693 token exchange.
-- Generates and directly runs authentication, authorization, and JWT vulnerability tests from OpenAPI specifications.
+- Includes an OpenAPI Pen Test Generator that generates and directly runs authentication, authorization, and JWT vulnerability tests from OpenAPI specifications.
 - Runs locally, in CI/CD, or on Cloudflare Workers.
 
 ## Quick Start
@@ -62,7 +62,7 @@ Stop the local server:
 jwtforge stop
 ```
 
-Analyze and directly test a JWT-protected API from its OpenAPI specification:
+Use the OpenAPI Pen Test Generator to analyze and directly test a JWT-protected API from its OpenAPI specification:
 
 ```bash
 jwtforge pentest validate --spec openapi.yaml
@@ -72,7 +72,7 @@ jwtforge pentest run \
   --issuer http://localhost:8787
 ```
 
-Direct execution does not write Postman files. Use `jwtforge pentest generate` when Postman/Newman artifacts are required. See [OpenAPI JWT Pen Testing](https://jwtforge.dev/docs/pentest) and the runnable `examples/petstore-service` example.
+Direct execution does not write Postman files. Use `jwtforge pentest generate` when Postman/Newman artifacts are required. See the [OpenAPI Pen Test Generator](https://jwtforge.dev/docs/openapi-pen-test-generator) documentation and the runnable `examples/petstore-service` example.
 
 ## Local Development
 
@@ -165,6 +165,7 @@ Important pages:
 | [CLI](https://jwtforge.dev/docs/cli) | CLI installation, token generation, local server workflow, CI/CD, Postman, and GitHub Actions examples |
 | [Evaluation](https://jwtforge.dev/docs/evaluation) | Performance benchmark and representative OAuth2/OIDC testing scenarios |
 | [Security testing modes](https://jwtforge.dev/docs/modes/overview) | `fake`, `fuzz`, `malicious`, and `grammar` mode behavior and options |
+| [OpenAPI Pen Test Generator](https://jwtforge.dev/docs/openapi-pen-test-generator) | Generate or directly run authentication, authorization, and JWT vulnerability tests from an OpenAPI specification |
 | [OpenAPI and Swagger](https://jwtforge.dev/docs/reference/openapi) | OpenAPI contract, Swagger UI usage, local URLs, and production configuration |
 | [Swagger UI](https://jwtforge.dev/api-reference) | Interactive API reference served from the deployed docs site |
 
