@@ -40,13 +40,24 @@ jobs:
 
           let deletedCount = 0;
 
+          const oldPrTagPattern = /-pr/i;
+          const rcTagPattern = /^v?\d+\.\d+\.\d+rc\d+$/;
+          const rcTitlePattern = /^Pre-release \d+\.\d+\.\d+rc\d+$/;
+
           for (const release of releases.data) {
-            // Only process pre-releases with PR tags
-            if (release.prerelease && release.tag_name.includes('-pr')) {
+            const tagName = release.tag_name || '';
+            const releaseName = release.name || '';
+            const matchesPreReleasePattern =
+              oldPrTagPattern.test(tagName) ||
+              rcTagPattern.test(tagName) ||
+              rcTitlePattern.test(releaseName);
+
+            // Only process generated pre-releases. Supports old PR tags and current rc tag/title patterns.
+            if (release.prerelease && matchesPreReleasePattern) {
               const releaseDate = new Date(release.created_at);
 
               if (releaseDate < cutoffDate) {
-                console.log(`Deleting pre-release: ${release.tag_name} (created: ${releaseDate.toISOString()})`);
+                console.log(`Deleting pre-release: ${release.tag_name} / ${release.name} (created: ${releaseDate.toISOString()})`);
 
                 try {
                   // Delete the release

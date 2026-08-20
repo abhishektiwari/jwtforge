@@ -1,4 +1,4 @@
-.PHONY: help install dev docs docs-start docs-build docs-serve docs-clear deploy logs tail test test-unit test-feature test-all test-coverage test-watch test-server test-e2e-dev test-e2e-adv test-example-vuln test-prod clean login info rollback
+.PHONY: help install install-hooks dev docs docs-start docs-build docs-serve docs-clear deploy logs tail test test-unit test-feature test-all test-coverage test-watch test-server test-e2e-dev test-e2e-adv test-example-vuln test-prod clean login info rollback
 
 # Default target
 help:
@@ -6,6 +6,7 @@ help:
 	@echo ""
 	@echo "Setup & Deployment:"
 	@echo "  make install       - Install dependencies"
+	@echo "  make install-hooks - Configure local Git hooks"
 	@echo "  make dev           - Run local development server"
 	@echo "  make docs-start    - Run Docusaurus docs development server"
 	@echo "  make docs-build    - Build Docusaurus static documentation"
@@ -34,6 +35,12 @@ help:
 # Install dependencies
 install:
 	npm install
+
+# Configure local Git hooks
+install-hooks:
+	git config core.hooksPath .githooks
+	chmod +x .githooks/pre-push
+	@echo "Configured Git hooks from .githooks"
 
 # Run local development server
 dev:
