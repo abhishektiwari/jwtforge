@@ -1,0 +1,29 @@
+name: Version Guard
+
+on:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  require-package-version-change:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v7
+      with:
+        fetch-depth: 0
+
+    - name: Require package.json version change
+      run: |
+        git fetch origin "${{ github.base_ref }}" --depth=1
+        BASE_VERSION=$(git show "origin/${{ github.base_ref }}:package.json" | node -e "let data=''; process.stdin.on('data', chunk => data += chunk); process.stdin.on('end', () => console.log(JSON.parse(data).version || ''));")
+        HEAD_VERSION=$(node -p "require('./package.json').version || ''")
+
+        if [[ "$BASE_VERSION" == "$HEAD_VERSION" ]]; then
+          echo "package.json version must change for PRs targeting main."
+          echo "Current version: $HEAD_VERSION"
+          echo "Update the release version, for example:"
+          echo "  npm version patch --no-git-tag-version"
+          exit 1
+        fi
+
+        echo "package.json version changed: $BASE_VERSION -> $HEAD_VERSION"

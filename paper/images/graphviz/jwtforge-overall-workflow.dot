@@ -1,0 +1,36 @@
+digraph jwtforge_generation {
+    fontname="Helvetica,Arial,sans-serif"
+    node [fontname="Helvetica,Arial,sans-serif", style=filled]
+    edge [fontname="Helvetica,Arial,sans-serif"]
+    rankdir=TB;
+    
+    json_input [label="JSON Payload\nRequest", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    oauth_input [label="OAuth2 Client Credentials\n(Basic Auth)", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    exchange_input [label="Token Exchange (RFC 8693)\nSubject Token", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    
+    parse [label="Parse Request\nExtract claims,\nparameters", shape=box, fillcolor="#E8F5E9"]
+    scope [label="OIDC Scope Processing\n(openid, profile, email,\naddress, phone)", shape=box, fillcolor="#FFF4E6"]
+    extract_claims [label="Extract Claims\nfrom Subject Token\n(or auto-generate)", shape=box, fillcolor="#FFF4E6"]
+    mode_apply [label="Apply Mode Transformations\n(compliant/fuzz/malicious/grammar)", shape=box, fillcolor="#E8F5E9"]
+    claim_transform [label="Apply Claim Transformation\n(add_claims, remove_claims)", shape=box, fillcolor="#FFF4E6"]
+    keystore [label="Key Retrieval\n(RSA/EC from storage)", shape=box, fillcolor="#FCE4EC"]
+    header_fuzz [label="Header Processing\n(alg, kid transformation)", shape=box, fillcolor="#E8F5E9"]
+    sign [label="JWT Signing\n(Web Crypto API)", shape=box, fillcolor="#E8F5E9"]
+    output [label="HTTP Response\nSigned JWT + Metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
+    
+    json_input -> parse
+    oauth_input -> parse
+    exchange_input -> extract_claims
+    
+    parse -> scope
+    scope -> mode_apply
+    parse -> mode_apply [style=dashed, label="if no scope"]
+    extract_claims -> claim_transform
+    claim_transform -> mode_apply
+    
+    mode_apply -> header_fuzz
+    parse -> keystore
+    header_fuzz -> sign
+    keystore -> sign
+    sign -> output
+}

@@ -1,0 +1,43 @@
+digraph jwtforge_generation {
+    fontname="Helvetica,Arial,sans-serif"
+    node [fontname="Helvetica,Arial,sans-serif", style=filled]
+    edge [fontname="Helvetica,Arial,sans-serif"]
+    rankdir=TB;
+
+    json_input [label="JSON Payload\nRequest", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    oauth_input [label="OAuth2 Client Credentials\n(Basic Auth)", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    exchange_input [label="Token Exchange (RFC 8693)\nSubject Token", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+
+    parse [label="Parse Request\nExtract claims,\nparameters", shape=box, fillcolor="#E8F5E9"]
+    keystore [label="Key Retrieval +\nVulnerability Preset\n(RSA/EC from storage)", shape=box, fillcolor="#FCE4EC"]
+    scope [label="OIDC Scope Defaults\n(mode = fake / compliant\nonly)", shape=box, fillcolor="#FFF4E6"]
+    header_fuzz [label="Header Processing\n(alg, kid transformation;\nruns for every mode)", shape=box, fillcolor="#E8F5E9"]
+    mode_apply [label="Apply Claims Mode\nTransformation\n(compliant/fuzz/malicious/grammar)", shape=box, fillcolor="#E8F5E9"]
+
+    extract_claims [label="Extract Claims\nfrom Subject Token\n(no signature\nverification)", shape=box, fillcolor="#FFF4E6"]
+    claim_transform [label="Apply Claim Transformation\n(add_claims, remove_claims)", shape=box, fillcolor="#FFF4E6"]
+    keystore_exchange [label="Key Retrieval\n(RSA from storage)", shape=box, fillcolor="#FCE4EC"]
+
+    sign [label="JWT Signing\n(Web Crypto API)", shape=box, fillcolor="#E8F5E9"]
+    output [label="HTTP Response\nSigned JWT + Metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
+
+    json_input -> parse
+    oauth_input -> parse
+    exchange_input -> extract_claims
+
+    parse -> keystore
+    keystore -> header_fuzz
+    keystore -> mode_apply
+    keystore -> scope [style=dashed, label="mode = fake\n(compliant, default)"]
+    scope -> mode_apply [style=dashed]
+
+    extract_claims -> claim_transform
+    claim_transform -> keystore_exchange
+
+    header_fuzz -> sign [label="header overrides"]
+    mode_apply -> sign [label="access_token"]
+    mode_apply -> sign [style=dashed, label="id_token\n(independent re-run,\nresponse_type=\nid_token token)"]
+    keystore_exchange -> sign [label="access_token\n(no mode/header\noverrides)"]
+
+    sign -> output
+}

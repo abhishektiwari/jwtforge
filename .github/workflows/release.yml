@@ -31,36 +31,30 @@ jobs:
       if: github.event_name == 'pull_request'
       id: generate_pr_version
       run: |
-        # Get base version from latest tag or default to 0.0.0
-        BASE_VERSION=$(git describe --tags --abbrev=0 2>/dev/null | sed 's/^v//' || echo "0.0.0")
+        BASE_VERSION=$(node -p "require('./package.json').version || '0.0.0'")
 
-        # Generate PEP 440 compatible pre-release version with timestamp
-        SHORT_SHA=$(git rev-parse --short HEAD)
-        PR_NUMBER=${{ github.event.number }}
-        TIMESTAMP=$(date +%s)
+        VERSION="${BASE_VERSION}-dev.${GITHUB_RUN_NUMBER}"
+        VERSION_TAG="v${VERSION}"
+        GITHUB_TAG="v${BASE_VERSION}-pr${{ github.event.number }}.${GITHUB_RUN_NUMBER}.${GITHUB_RUN_ATTEMPT}"
 
-        # Use PEP 440 compatible format with PR number and timestamp
-        PRERELEASE_VERSION="${BASE_VERSION}rc${PR_NUMBER}${TIMESTAMP}"
-        PRERELEASE_TAG="v${PRERELEASE_VERSION}"
-
-        # GitHub tag for releases (with PR number and timestamp)
-        GITHUB_TAG="v${PRERELEASE_VERSION}"
-
-        echo "version=$PRERELEASE_VERSION" >> $GITHUB_OUTPUT
-        echo "version_tag=$PRERELEASE_TAG" >> $GITHUB_OUTPUT
-        echo "github_tag=$GITHUB_TAG" >> $GITHUB_OUTPUT
-        echo "is_prerelease=true" >> $GITHUB_OUTPUT
+        {
+          echo "version=${VERSION}"
+          echo "version_tag=${VERSION_TAG}"
+          echo "github_tag=${GITHUB_TAG}"
+          echo "is_prerelease=true"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Generate version for release
       if: github.event_name == 'workflow_run'
       id: generate_release_version
-      uses: paulhatch/semantic-version@v6.0.3
-      with:
-        tag_prefix: "v"
-        major_pattern: "(MAJOR)"
-        minor_pattern: "(MINOR)"
-        version_format: "${major}.${minor}.${patch}"
-        bump_each_commit: true
+      run: |
+        VERSION=$(node -p "require('./package.json').version || '0.0.0'")
+        VERSION_TAG="v${VERSION}"
+
+        {
+          echo "version=${VERSION}"
+          echo "version_tag=${VERSION_TAG}"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Set outputs
       id: generate_version
@@ -98,6 +92,10 @@ jobs:
     - name: Install dependencies
       run: npm ci
 
+    - name: Set package version
+      if: needs.generate-version.outputs.is_prerelease == 'true'
+      run: npm version "${{ needs.generate-version.outputs.version }}" --no-git-tag-version
+
     - name: Build for deployment
       run: npm run build || echo "No build script defined"
 
@@ -123,7 +121,7 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ needs.generate-version.outputs.github_tag }}
-        name: Release ${{ needs.generate-version.outputs.version }}
+        name: ${{ needs.generate-version.outputs.version }}
         draft: false
         prerelease: ${{ needs.generate-version.outputs.is_prerelease }}
         token: ${{ secrets.GITHUB_TOKEN }}
@@ -157,12 +155,12 @@ jobs:
       uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ needs.generate-version.outputs.github_tag }}
-        name: Pre-release ${{ needs.generate-version.outputs.version }}
+        name: ${{ needs.generate-version.outputs.github_tag }}
         draft: false
         prerelease: true
         token: ${{ secrets.GITHUB_TOKEN }}
         body: |
-          ## Pre-release ${{ needs.generate-version.outputs.version }}
+          ## ${{ needs.generate-version.outputs.github_tag }}
 
           This is a pre-release version for testing purposes.
 
