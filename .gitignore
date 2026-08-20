@@ -29,6 +29,7 @@ example.db
 
 # Build artifacts and local caches
 build/
+generated/
 dist/
 .cache/
 .turbo/

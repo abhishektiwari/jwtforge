@@ -50,16 +50,16 @@ jobs:
       with:
         python-version: '3.11'
         cache: 'pip'
-        cache-dependency-path: 'example/requirements.txt'
+        cache-dependency-path: 'examples/fastapi-service/requirements.txt'
 
     - name: Install FastAPI example dependencies
-      working-directory: example
+      working-directory: examples/fastapi-service
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
     - name: Create example .env file
-      working-directory: example
+      working-directory: examples/fastapi-service
       run: |
         cat > .env << 'EOF'
         DATABASE_URL=sqlite:///./example.db
@@ -68,11 +68,11 @@ jobs:
         EOF
 
     - name: Run database migrations
-      working-directory: example
+      working-directory: examples/fastapi-service
       run: alembic upgrade head
 
     - name: Start FastAPI dev server
-      working-directory: example
+      working-directory: examples/fastapi-service
       run: |
         uvicorn main:app --host 0.0.0.0 --port 8000 &
       timeout-minutes: 2
@@ -96,16 +96,16 @@ jobs:
 
     - name: Run integration tests
       run: |
-        npx newman run example/Axioms_FastAPI_Example.postman_collection.json \
-          -e example/Axioms_FastAPI_Example.postman_environment.json \
+        npx newman run examples/fastapi-service/Axioms_FastAPI_Example.postman_collection.json \
+          -e examples/fastapi-service/Axioms_FastAPI_Example.postman_environment.json \
           --delay-request 5000 \
           --reporters cli,json \
           --reporter-json-export integration-test-results.json || true
 
     - name: Run JWT vulnerability integration tests
       run: |
-        npx newman run example/Axioms_FastAPI_JWT_Vulnerabilities.postman_collection.json \
-          -e example/Axioms_FastAPI_Example.postman_environment.json \
+        npx newman run examples/fastapi-service/Axioms_FastAPI_JWT_Vulnerabilities.postman_collection.json \
+          -e examples/fastapi-service/Axioms_FastAPI_Example.postman_environment.json \
           --delay-request 5000 \
           --reporters cli,json \
           --reporter-json-export integration-jwt-vulnerability-results.json || true
@@ -143,3 +143,115 @@ jobs:
           fi
         fi
         exit "$EXIT_CODE"
+
+  openapi-pentest:
+    name: OpenAPI pentest CLI
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version: 22.x
+        cache: 'npm'
+
+    - name: Install JWTForge dependencies
+      run: npm ci
+
+    - name: Install Petstore dependencies
+      run: npm ci --prefix examples/petstore-service
+
+    - name: Start JWTForge
+      run: |
+        echo "ISSUER=http://localhost:8787" > .dev.vars
+        npm run dev > jwtforge-pentest.log 2>&1 &
+
+    - name: Wait for JWTForge
+      run: |
+        for i in {1..30}; do
+          if curl --fail --silent http://localhost:8787/.well-known/openid-configuration > /dev/null; then
+            echo "JWTForge is ready"
+            exit 0
+          fi
+          sleep 2
+        done
+        cat jwtforge-pentest.log
+        exit 1
+
+    - name: Start Petstore target
+      env:
+        PORT: 8000
+        JWT_ISSUER: http://localhost:8787
+        JWT_AUDIENCE: http://localhost:8000
+      run: npm --prefix examples/petstore-service start > petstore-pentest.log 2>&1 &
+
+    - name: Wait for Petstore
+      run: |
+        for i in {1..30}; do
+          if curl --fail --silent http://localhost:8000/health > /dev/null; then
+            echo "Petstore is ready"
+            exit 0
+          fi
+          sleep 1
+        done
+        cat petstore-pentest.log
+        exit 1
+
+    - name: Validate served OpenAPI security metadata
+      run: |
+        node bin/jwtforge.js pentest validate \
+          --spec http://localhost:8000/openapi.json \
+          --config examples/petstore-service/security-config.json
+
+    - name: Verify in-memory test plan
+      run: |
+        node bin/jwtforge.js pentest run \
+          --spec http://localhost:8000/openapi.json \
+          --config examples/petstore-service/security-config.json \
+          --target-url http://localhost:8000 \
+          --issuer http://localhost:8787 \
+          --jwtforge-url http://localhost:8787 \
+          --audience http://localhost:8000 \
+          --dry-run
+
+    - name: Run OpenAPI JWT pentest
+      run: |
+        mkdir -p test-results
+        node bin/jwtforge.js pentest run \
+          --spec http://localhost:8000/openapi.json \
+          --config examples/petstore-service/security-config.json \
+          --target-url http://localhost:8000 \
+          --issuer http://localhost:8787 \
+          --jwtforge-url http://localhost:8787 \
+          --audience http://localhost:8000 \
+          --allow-write-methods \
+          --timeout-ms 15000 \
+          --report test-results/openapi-pentest.json
+
+    - name: Verify pentest report
+      run: |
+        node -e "const report = require('./test-results/openapi-pentest.json'); if (report.summary.failed !== 0 || report.summary.passed < 1) process.exit(1); console.log(report.summary);"
+
+    - name: Publish pentest summary
+      if: always()
+      run: |
+        if [ -f test-results/openapi-pentest.json ]; then
+          echo "## OpenAPI JWT pentest" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Passed: $(jq '.summary.passed' test-results/openapi-pentest.json)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Failed: $(jq '.summary.failed' test-results/openapi-pentest.json)" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Skipped: $(jq '.summary.skipped' test-results/openapi-pentest.json)" >> "$GITHUB_STEP_SUMMARY"
+        fi
+
+    - name: Upload pentest report and logs
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: openapi-pentest-results
+        path: |
+          test-results/openapi-pentest.json
+          jwtforge-pentest.log
+          petstore-pentest.log
+        if-no-files-found: warn

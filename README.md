@@ -23,6 +23,7 @@ A lightweight JWT token vending service for testing purposes, deployable on Clou
 - Provides `fake`, `fuzz`, `malicious`, and `grammar` testing modes.
 - Supports known JWT attack presets such as `alg_none`, RS/HS confusion, `kid` traversal, `jku` injection, and embedded JWK.
 - Provides OIDC discovery, JWKS, token introspection, OAuth2 client credentials, and RFC 8693 token exchange.
+- Generates and directly runs authentication, authorization, and JWT vulnerability tests from OpenAPI specifications.
 - Runs locally, in CI/CD, or on Cloudflare Workers.
 
 ## Quick Start
@@ -60,6 +61,18 @@ Stop the local server:
 ```bash
 jwtforge stop
 ```
+
+Analyze and directly test a JWT-protected API from its OpenAPI specification:
+
+```bash
+jwtforge pentest validate --spec openapi.yaml
+jwtforge pentest run \
+  --spec openapi.yaml \
+  --target-url http://localhost:8000 \
+  --issuer http://localhost:8787
+```
+
+Direct execution does not write Postman files. Use `jwtforge pentest generate` when Postman/Newman artifacts are required. See [OpenAPI JWT Pen Testing](https://jwtforge.dev/docs/pentest) and the runnable `examples/petstore-service` example.
 
 ## Local Development
 

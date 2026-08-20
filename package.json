@@ -1,6 +1,6 @@
 {
   "name": "jwtforge",
-  "version": "0.0.37",
+  "version": "0.1.0",
   "description": "JWT token vending service for testing with JWKS and OIDC discovery endpoints",
   "main": "src/index.js",
   "bin": {
@@ -19,7 +19,8 @@
     "docs:clear": "docusaurus clear",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "check:worker-bundle": "wrangler deploy --dry-run --outdir .wrangler/worker-bundle-check && node scripts/check-worker-bundle.js .wrangler/worker-bundle-check"
   },
   "keywords": [
     "jwt",
@@ -46,7 +47,8 @@
   },
   "dependencies": {
     "@faker-js/faker": "^10.4.0",
-    "blns": "^2.0.4"
+    "blns": "^2.0.4",
+    "yaml": "^2.9.0"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.29.7",

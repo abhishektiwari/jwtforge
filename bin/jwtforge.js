@@ -69,6 +69,7 @@ jwtforge - JWT Token Vending Service for Testing
 Usage:
   jwtforge start                      Start the development server
   jwtforge token [payload] [options]  Generate a JWT token
+  jwtforge pentest <command> [options] Generate or run OpenAPI JWT pen tests
   jwtforge status [options]           Check if server is running
   jwtforge stop [options]             Stop the running server
   jwtforge help                       Show this help message
@@ -80,6 +81,8 @@ Examples:
   jwtforge start
   jwtforge token
   jwtforge token '{"sub":"user123","scope":"profile email"}'
+  jwtforge pentest validate --spec openapi.yaml
+  jwtforge pentest run --spec openapi.yaml --target-url http://localhost:8000
   jwtforge status
   jwtforge stop
 
@@ -330,6 +333,9 @@ async function main() {
       console.error('Error:', error.message);
       process.exit(1);
     }
+  } else if (command === 'pentest') {
+    const { runPentestCommand } = require('./commands/pentest');
+    process.exitCode = await runPentestCommand(process.argv.slice(3));
   } else if (command === 'status') {
     try {
       const status = await checkStatus();

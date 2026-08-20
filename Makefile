@@ -1,4 +1,4 @@
-.PHONY: help install install-hooks dev docs docs-start docs-build docs-serve docs-clear deploy logs tail test test-unit test-feature test-all test-coverage test-watch test-server test-e2e-dev test-e2e-adv test-example-vuln test-prod clean login info rollback
+.PHONY: help install install-hooks dev docs docs-start docs-build docs-serve docs-clear deploy check-worker-bundle logs tail test test-unit test-feature test-pentest test-all test-coverage test-watch test-server test-e2e-dev test-e2e-adv test-example-vuln test-prod pentest-validate pentest-generate pentest-run petstore-install petstore-start clean login info rollback
 
 # Default target
 help:
@@ -13,12 +13,14 @@ help:
 	@echo "  make docs-serve    - Serve the built Docusaurus site locally"
 	@echo "  make docs-clear    - Clear Docusaurus cache"
 	@echo "  make deploy        - Deploy to Cloudflare Workers"
+	@echo "  make check-worker-bundle - Verify Node-only pentest code is not bundled"
 	@echo "  make logs          - Stream real-time logs from deployed worker"
 	@echo "  make tail          - Alias for logs"
 	@echo ""
 	@echo "Testing:"
 	@echo "  make test-unit     - Run unit tests (modes, grammar)"
 	@echo "  make test-feature  - Run feature tests (token generation, introspection, exchange, keys)"
+	@echo "  make test-pentest  - Run OpenAPI pentest generator and runner unit tests"
 	@echo "  make test-all      - Run all Jest tests"
 	@echo "  make test-watch    - Run tests in watch mode"
 	@echo "  make test-coverage - Generate coverage report"
@@ -27,6 +29,10 @@ help:
 	@echo "  make test-e2e-adv  - Run Postman advanced tests with dev environment"
 	@echo "  make test-example-vuln - Run example JWT vulnerability Postman tests"
 	@echo "  make test-prod     - Run tests against production server"
+	@echo "  make pentest-validate - Validate the Petstore OpenAPI security metadata"
+	@echo "  make pentest-generate - Generate Petstore Postman artifacts"
+	@echo "  make pentest-run   - Directly run the Petstore test plan"
+	@echo "  make petstore-start - Start the local Express Petstore target"
 	@echo ""
 	@echo "Maintenance:"
 	@echo "  make clean         - Clean node_modules and cache"
@@ -73,6 +79,9 @@ deploy:
 	@echo "Deployment complete! Test with:"
 	@echo "  make test-prod"
 
+check-worker-bundle:
+	npm run check:worker-bundle
+
 # Stream logs from production
 logs:
 	npx wrangler tail
@@ -98,6 +107,25 @@ test-feature:
 	@echo ""
 	@echo "✓ Feature tests completed"
 	@echo ""
+
+test-pentest:
+	@echo "Running OpenAPI pentest tests..."
+	npm run test -- __tests__/pentest
+
+pentest-validate:
+	node bin/jwtforge.js pentest validate --spec examples/petstore-service/openapi.yaml --config examples/petstore-service/security-config.json
+
+pentest-generate:
+	node bin/jwtforge.js pentest generate --spec examples/petstore-service/openapi.yaml --config examples/petstore-service/security-config.json --out generated/petstore --test-base-url http://localhost:8000 --test-issuer http://localhost:8787
+
+pentest-run:
+	node bin/jwtforge.js pentest run --spec examples/petstore-service/openapi.yaml --config examples/petstore-service/security-config.json --target-url http://localhost:8000 --issuer http://localhost:8787 --allow-write-methods --report generated/petstore/direct-run-report.json
+
+petstore-install:
+	$(MAKE) -C examples/petstore-service install
+
+petstore-start:
+	$(MAKE) -C examples/petstore-service start
 
 # Run all Jest tests
 test-all:
@@ -177,7 +205,7 @@ test-e2e-adv:
 test-example-vuln:
 	@echo "Running example JWT vulnerability Postman tests..."
 	@echo ""
-	cd example && $(MAKE) newman-vuln
+	$(MAKE) -C examples/fastapi-service newman-vuln
 	@echo ""
 	@echo "✓ Example JWT vulnerability tests completed"
 	@echo ""

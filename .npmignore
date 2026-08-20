@@ -39,6 +39,7 @@ CHANGELOG.md
 CONTRIBUTING.md
 
 # Build/Config
+generated/
 wrangler.toml
 tsconfig.json
 webpack.config.js
