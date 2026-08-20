@@ -31,10 +31,7 @@ jobs:
       if: github.event_name == 'pull_request'
       id: generate_pr_version
       run: |
-        BASE_VERSION=$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n1 | sed 's/^v//')
-        if [[ -z "$BASE_VERSION" ]]; then
-          BASE_VERSION=$(node -p "require('./package.json').version || '0.0.0'")
-        fi
+        BASE_VERSION=$(node -p "require('./package.json').version || '0.0.0'")
 
         VERSION="${BASE_VERSION}-dev.${GITHUB_RUN_NUMBER}"
         VERSION_TAG="v${VERSION}"
@@ -50,13 +47,14 @@ jobs:
     - name: Generate version for release
       if: github.event_name == 'workflow_run'
       id: generate_release_version
-      uses: paulhatch/semantic-version@v6.0.3
-      with:
-        tag_prefix: "v"
-        major_pattern: "(MAJOR)"
-        minor_pattern: "(MINOR)"
-        version_format: "${major}.${minor}.${patch}"
-        bump_each_commit: true
+      run: |
+        VERSION=$(node -p "require('./package.json').version || '0.0.0'")
+        VERSION_TAG="v${VERSION}"
+
+        {
+          echo "version=${VERSION}"
+          echo "version_tag=${VERSION_TAG}"
+        } >> "$GITHUB_OUTPUT"
 
     - name: Set outputs
       id: generate_version
@@ -95,6 +93,7 @@ jobs:
       run: npm ci
 
     - name: Set package version
+      if: needs.generate-version.outputs.is_prerelease == 'true'
       run: npm version "${{ needs.generate-version.outputs.version }}" --no-git-tag-version
 
     - name: Build for deployment
