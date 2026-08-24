@@ -13,6 +13,7 @@ const config = {
   favicon: 'img/favicon.svg',
   url: 'https://jwtforge.dev',
   baseUrl: '/',
+  trailingSlash: true,
   organizationName: 'abhishektiwari',
   projectName: 'jwtforge',
   customFields: {
@@ -126,13 +127,13 @@ const config = {
         },
         items: [
           { to: '/', label: 'Try', position: 'left' },
-          { to: '/docs/intro', label: 'Docs', position: 'left' },
+          { to: '/docs/intro/', label: 'Docs', position: 'left' },
           {
-            to: '/docs/openapi-pen-test-generator',
+            to: '/docs/openapi-pen-test-generator/',
             label: 'OpenAPI Pen Test Generator',
             position: 'left',
           },
-          { to: '/api-reference', label: 'Swagger', position: 'left' },
+          { to: '/api-reference/', label: 'Swagger', position: 'left' },
           {
             href: 'https://github.com/abhishektiwari/jwtforge',
             label: 'GitHub',
@@ -146,19 +147,19 @@ const config = {
           {
             title: 'Docs',
             items: [
-              { label: 'Overview', to: '/docs/intro' },
-              { label: 'Structured JSON', to: '/docs/token-endpoint/structured-json' },
-              { label: 'Grammar Templates', to: '/docs/modes/grammar' },
+              { label: 'Overview', to: '/docs/intro/' },
+              { label: 'Structured JSON', to: '/docs/token-endpoint/structured-json/' },
+              { label: 'Grammar Templates', to: '/docs/modes/grammar/' },
               {
                 label: 'OpenAPI Pen Test Generator',
-                to: '/docs/openapi-pen-test-generator',
+                to: '/docs/openapi-pen-test-generator/',
               },
             ],
           },
           {
             title: 'Reference',
             items: [
-              { label: 'Swagger', to: '/api-reference' },
+              { label: 'Swagger', to: '/api-reference/' },
               { label: 'GitHub', href: 'https://github.com/abhishektiwari/jwtforge' },
             ],
           },

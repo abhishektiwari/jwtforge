@@ -1,6 +1,6 @@
 {
   "name": "jwtforge",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "JWT token vending service for testing with JWKS and OIDC discovery endpoints",
   "main": "src/index.js",
   "bin": {

@@ -72,7 +72,7 @@ jwtforge pentest run \
   --issuer http://localhost:8787
 ```
 
-Direct execution does not write Postman files. Use `jwtforge pentest generate` when Postman/Newman artifacts are required. See the [OpenAPI Pen Test Generator](https://jwtforge.dev/docs/openapi-pen-test-generator) documentation and the runnable `examples/petstore-service` example.
+Direct execution does not write Postman files. Use `jwtforge pentest generate` when Postman/Newman artifacts are required. See the [OpenAPI Pen Test Generator](https://jwtforge.dev/docs/openapi-pen-test-generator/) documentation and the runnable `examples/petstore-service` example.
 
 ## Local Development
 
@@ -161,24 +161,24 @@ Important pages:
 
 | Page | What it covers |
 | --- | --- |
-| [Overview](https://jwtforge.dev/docs/intro) | Project introduction, request styles, and first token examples |
-| [CLI](https://jwtforge.dev/docs/cli) | CLI installation, token generation, local server workflow, CI/CD, Postman, and GitHub Actions examples |
-| [Evaluation](https://jwtforge.dev/docs/evaluation) | Performance benchmark and representative OAuth2/OIDC testing scenarios |
-| [Security testing modes](https://jwtforge.dev/docs/modes/overview) | `fake`, `fuzz`, `malicious`, and `grammar` mode behavior and options |
-| [OpenAPI Pen Test Generator](https://jwtforge.dev/docs/openapi-pen-test-generator) | Generate or directly run authentication, authorization, and JWT vulnerability tests from an OpenAPI specification |
-| [OpenAPI and Swagger](https://jwtforge.dev/docs/reference/openapi) | OpenAPI contract, Swagger UI usage, local URLs, and production configuration |
-| [Swagger UI](https://jwtforge.dev/api-reference) | Interactive API reference served from the deployed docs site |
+| [Overview](https://jwtforge.dev/docs/intro/) | Project introduction, request styles, and first token examples |
+| [CLI](https://jwtforge.dev/docs/cli/) | CLI installation, token generation, local server workflow, CI/CD, Postman, and GitHub Actions examples |
+| [Evaluation](https://jwtforge.dev/docs/evaluation/) | Performance benchmark and representative OAuth2/OIDC testing scenarios |
+| [Security testing modes](https://jwtforge.dev/docs/modes/overview/) | `fake`, `fuzz`, `malicious`, and `grammar` mode behavior and options |
+| [OpenAPI Pen Test Generator](https://jwtforge.dev/docs/openapi-pen-test-generator/) | Generate or directly run authentication, authorization, and JWT vulnerability tests from an OpenAPI specification |
+| [OpenAPI and Swagger](https://jwtforge.dev/docs/reference/openapi/) | OpenAPI contract, Swagger UI usage, local URLs, and production configuration |
+| [Swagger UI](https://jwtforge.dev/api-reference/) | Interactive API reference served from the deployed docs site |
 
 Token endpoint documentation:
 
 | Topic | What it covers |
 | --- | --- |
-| [Structured JSON](https://jwtforge.dev/docs/token-endpoint/structured-json) | Recommended `{header, body, signature}` request shape, examples, field placement, modes, and vulnerability presets |
-| [Legacy flat JSON](https://jwtforge.dev/docs/token-endpoint/legacy-flat-json) | Backward-compatible claim-at-top-level request style and migration guidance |
-| [Signatures](https://jwtforge.dev/docs/token-endpoint/signatures) | Signed tokens, unsigned test tokens, literal signature segments, and signature-related testing behavior |
-| [Header fields](https://jwtforge.dev/docs/reference/header-fields) | Supported JWT header fields, rejected certificate-chain fields, defaults, examples, and security notes |
-| [OIDC/OAuth2 claims](https://jwtforge.dev/docs/reference/oidc-oauth2-claims) | Supported standard claims, custom claims, defaults, examples, and claim metadata rules |
-| [OIDC scopes](https://jwtforge.dev/docs/reference/oidc-scopes) | Scope-driven claim population for `openid`, `profile`, `email`, `address`, and `phone` |
+| [Structured JSON](https://jwtforge.dev/docs/token-endpoint/structured-json/) | Recommended `{header, body, signature}` request shape, examples, field placement, modes, and vulnerability presets |
+| [Legacy flat JSON](https://jwtforge.dev/docs/token-endpoint/legacy-flat-json/) | Backward-compatible claim-at-top-level request style and migration guidance |
+| [Signatures](https://jwtforge.dev/docs/token-endpoint/signatures/) | Signed tokens, unsigned test tokens, literal signature segments, and signature-related testing behavior |
+| [Header fields](https://jwtforge.dev/docs/reference/header-fields/) | Supported JWT header fields, rejected certificate-chain fields, defaults, examples, and security notes |
+| [OIDC/OAuth2 claims](https://jwtforge.dev/docs/reference/oidc-oauth2-claims/) | Supported standard claims, custom claims, defaults, examples, and claim metadata rules |
+| [OIDC scopes](https://jwtforge.dev/docs/reference/oidc-scopes/) | Scope-driven claim population for `openid`, `profile`, `email`, `address`, and `phone` |
 
 ## Testing Modes
 
@@ -186,12 +186,12 @@ JWTForge supports four mode families:
 
 | Mode | Purpose |
 | --- | --- |
-| [`fake`](https://jwtforge.dev/docs/modes/fake) | Realistic OIDC-style data using Faker |
-| [`fuzz`](https://jwtforge.dev/docs/modes/fuzz) | Random BLNS and edge-case mutation |
-| [`malicious`](https://jwtforge.dev/docs/modes/malicious) | Injection payloads for security testing |
-| [`grammar`](https://jwtforge.dev/docs/modes/grammar) | Categorized JWT/OIDC grammar-based values |
+| [`fake`](https://jwtforge.dev/docs/modes/fake/) | Realistic OIDC-style data using Faker |
+| [`fuzz`](https://jwtforge.dev/docs/modes/fuzz/) | Random BLNS and edge-case mutation |
+| [`malicious`](https://jwtforge.dev/docs/modes/malicious/) | Injection payloads for security testing |
+| [`grammar`](https://jwtforge.dev/docs/modes/grammar/) | Categorized JWT/OIDC grammar-based values |
 
-See [Security Testing Modes](https://jwtforge.dev/docs/modes/overview) for the full mode reference.
+See [Security Testing Modes](https://jwtforge.dev/docs/modes/overview/) for the full mode reference.
 
 ## CLI And CI/CD
 
@@ -203,7 +203,7 @@ TOKEN=$(jwtforge token '{"body":{"sub":"ci-user","scope":"openid profile"}}' | j
 jwtforge stop
 ```
 
-See [CLI docs](https://jwtforge.dev/docs/cli) for:
+See [CLI docs](https://jwtforge.dev/docs/cli/) for:
 
 - CLI install and command reference
 - [GitHub Actions unit and Postman E2E workflow](https://github.com/abhishektiwari/jwtforge/blob/main/.github/workflows/test.yml)
