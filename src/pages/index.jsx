@@ -19,8 +19,8 @@ export default function Home() {
                 A JWT Vending Service for Testing, Fuzzing, and Security Research of OAuth2/OIDC Implementations.
               </p>
               <div className={styles.heroActions}>
-                <Link className="button button--primary" to="/docs/intro">Read docs</Link>
-                <Link className="button button--secondary" to="/api-reference">Swagger UI</Link>
+                <Link className="button button--primary" to="/docs/intro/">Read docs</Link>
+                <Link className="button button--secondary" to="/api-reference/">Swagger UI</Link>
                 <a
                   className={styles.deployButton}
                   href="https://deploy.workers.cloudflare.com/?url=https://github.com/abhishektiwari/jwtforge"
