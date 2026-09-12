@@ -111,7 +111,7 @@ Token generation proceeds through five stages.
 5. **Signing and Response:** Modified claims are assembled with the JWT header and signed using the Web Crypto API [@w3c_webcrypto]. Compact JWT output is the default, while callers can request flattened JWS JSON Serialization or general JWS JSON Serialization via the `format` parameter. For hybrid flows (`response_type=id_token token`), access and ID tokens are generated independently.
 
 
-![JWTForge generation and mutation workflows. Token exchange bypasses generation-mode transforms and issues compact RS256 tokens. Mutation independently transforms an imported or generated source without automatic re-signing. Dashed arrows indicate conditional paths. \label{fig:workflow}](./images/jwtforge-overall-workflow.pdf){width=100%}
+![JWTForge generation and mutation workflows. Token exchange bypasses generation-mode transforms and issues compact RS256 tokens. Mutation independently transforms an imported or generated source without automatic re-signing. Dashed arrows indicate conditional paths. \label{fig:workflow}](./images/jwtforge-overall-workflow.svg){width=100%}
 
 ## Token Generation and Mutation Approaches
 
@@ -133,9 +133,9 @@ JWTForge supports two operational patterns (Figure \ref{fig:cicd}, Figure \ref{f
 
 Its OpenAPI JWT pentest generator discovers protected endpoints from API specifications, derives authentication and authorization test plans, and programmatically runs JWT vulnerability probes against each operation to validate issuer, audience, scope, role, signature, key, and format-confusion handling in target services.
 
-![CI/CD integration: generation probes and optional custom mutation batches test target decisions against a baseline before promotion. \label{fig:cicd}](./images/jwtforge-cicd-workflow.pdf){width=100%}
+![CI/CD integration: generation probes and optional custom mutation batches test target decisions against a baseline before promotion. \label{fig:cicd}](./images/jwtforge-cicd-workflow.svg){width=100%}
 
-![Researcher workflow: generate adversarial tokens or mutate captured/generated sources, then replay baseline and variant tokens against target APIs. \label{fig:researcher}](./images/jwtforge-researcher-workflow.pdf){width=100%}
+![Researcher workflow: generate adversarial tokens or mutate captured/generated sources, then replay baseline and variant tokens against target APIs. \label{fig:researcher}](./images/jwtforge-researcher-workflow.svg){width=100%}
 
 # Research impact
 
