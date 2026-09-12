@@ -46,7 +46,7 @@ The target audience is broad: security engineers running fuzzing campaigns; pene
 
 The JWT security tooling ecosystem comprises tools focused on exploitation, interactive editing, brute-force secret recovery, and library-level differential testing. **jwt_tool** [@jwt_tool] performs algorithm confusion attacks, brute-force HMAC recovery, and claim tampering, but requires an existing JWT as input. **JWT Editor** [@jwt_editor] and **JOSEPH** [@joseph] are Burp Suite extensions enabling interactive JWT modification within intercepted traffic; both require proxy-based interception and human interaction, precluding CI/CD integration. **JWT Cracker** [@jwt_cracker] focuses on HMAC-SHA256 secret brute-forcing. **JWTeemo** [@jwteemo], the artifact associated with Token Time Bomb [@yang2026token], targets systematic JWT library testing across signed JWS and encrypted JWE handling and includes format-confusion classes, building on attack categories publicly described by Tervoort [@tervoort2023three]. Its focus is library behavior rather than OAuth2/OIDC application workflows. Cryptographic libraries such as **Nimbus JOSE+JWT** [@nimbus] support programmatic construction but require application-level code to assemble testing scenarios.
 
-A *build vs. contribute* analysis motivates a new tool. The exploitation-focused tools (jwt_tool, JWT Editor, JOSEPH) are architected around the assumption that a token already exists and must be manipulated — adding generation, OIDC infrastructure, and categorical testing would require substantial architectural rework conflicting with their interactive, single-token operational models. Library-testing systems such as JWTeemo operate at a lower layer, exercising JWT parser and verifier libraries directly. Cryptographic libraries operate at an even lower abstraction layer: they provide signing primitives but require each consumer to assemble testing scenarios from scratch. JWTForge occupies a distinct architectural position — an HTTP service exposing testing modes as API parameters — complementing rather than replacing these tools. A representative workflow generates a token corpus with JWTForge and applies jwt_tool, JWT Editor, or JWTeemo-style corpus checks to individual tokens or libraries, combining generation-side automation with exploitation-side and library-side depth. Table \ref{tab:comparison} summarises tool capabilities.
+JWTForge occupies a distinct position: an HTTP service exposing token-generation and testing modes as API parameters. It complements exploitation tools and library fuzzers by generating reproducible corpora and endpoint-ready test traffic for OAuth2/OIDC applications. Table \ref{tab:comparison} summarises tool capabilities.
 
 \begin{table}[ht]
 \centering
@@ -91,7 +91,7 @@ Serverless deployment & $\checkmark$ & $\times$ & $\times$ & $\times$ & $\times$
 
 # Software design
 
-JWTForge is implemented in JavaScript, exposing an HTTP API for token generation and OIDC infrastructure endpoints. It can be installed locally via `npm` or deployed with one click to Cloudflare Workers. The architecture is modular, separating request parsing, claim transformation, cryptographic key management, and response formatting.
+JWTForge is a JavaScript HTTP API for token generation and OIDC infrastructure, installable via `npm` or deployable to Cloudflare Workers. Its modules separate request parsing, claim transformation, key management, and response formatting.
 
 ## Token Generation Workflow
 
@@ -99,16 +99,11 @@ Token generation proceeds through five stages.
 
 1. **Request Parsing:** The HTTP request body is parsed to extract JWT claims, metadata fields (`kty`, `mode`, `response_type`, `exclude`, `header_alg`, `header_kid`, `format`), custom claims, and optional structured fields (`header`, `body`, `signature`, `signatures`).
 
-2. **OIDC Scope Processing:** In compliant mode (the default), when the `scope` parameter includes standard OIDC scopes (`openid`, `profile`, `email`, `address`, `phone`), JWTForge auto-populates corresponding claims using Faker.js [@faker], eliminating manual construction of OIDC-conformant claim sets [@openid_connect]. Fuzz, malicious, and grammar modes skip this step.
+2. **OIDC Scope Processing:** In compliant mode, standard scopes (`openid`, `profile`, `email`, `address`, `phone`) populate corresponding Faker-backed claims [@faker; @openid_connect].
 
-3. **Mode-Specific Transformations:** Based on the `mode` parameter and the caller-supplied `exclude` list, one of four transformation strategies is applied:
+3. **Mode-Specific Transformations:** `fake`, `fuzz`, `malicious`, and `grammar` modes generate realistic claims, BLNS/boundary values, injection payloads, or RFC-derived categorical values.
 
-- *Compliant mode* (default): Faker-generated data is used without modification, producing tokens conformant with RFC 7519 and OIDC Core.
-- *Fuzz mode*: One to three claims (excluding protected `iss`, `jti`, `kty`, `response_type`, and caller-excluded fields) are replaced with entries drawn uniformly at random from the BLNS corpus [@blns] (485 strings) augmented with edge cases (`null`, `undefined`, `Infinity`, `NaN`, deeply nested objects, large arrays, numeric boundaries).
-- *Malicious mode*: Claims are replaced with injection payloads from ten categories: SQL, XSS, path traversal, command injection, LDAP, NoSQL, XXE, SSTI, header injection, and buffer overflow patterns.
-- *Grammar mode*: Claims and header fields are populated using categorical patterns derived from RFC 7519 [@rfc7519], RFC 7518 [@rfc7518], and OIDC Core [@openid_connect]. Each claim and header field is associated with categories: `valid`, `edge_cases`, `type_variations`, `injection`, and `vulnerable`. The caller selects a category via the `grammar_category` parameter, providing deterministic, specification-based test coverage — complementing fuzz mode's stochastic exploration.
-
-4. **Header Processing:** When `header_alg` or `header_kid` accompany fuzz or malicious modes, header-level transformations are applied: `alg` receives algorithm confusion variants (`none`/`None`/`NONE`/`nOnE`, symmetric key substitutions, BLNS patterns); `kid` receives BLNS, SQL injection, XSS, path traversal, and null-byte sequences. Grammar mode applies its own categorical header transformations independently of this fuzz/malicious gate.
+4. **Header and Format Processing:** Header transforms cover `alg` confusion and `kid` injection patterns. The `format` parameter selects compact JWT or JWS JSON Serialization for format-confusion tests.
 
 5. **Signing and Response:** Modified claims are assembled with the JWT header and signed using the Web Crypto API [@w3c_webcrypto]. Compact JWT output is the default, while callers can request flattened JWS JSON Serialization or general JWS JSON Serialization via the `format` parameter. For hybrid flows (`response_type=id_token token`), access and ID tokens are generated independently.
 
@@ -125,7 +120,7 @@ JWTForge supports three operationally distinct generation approaches:
 
 3. **Token Exchange (RFC 8693):** Clients submit a subject token (JWT, ID token, or access token) with optional `add_claims`/`remove_claims` modifications, enabling testing of exchange scenarios, delegation flows, and claim transformation without access to the original issuer. The introspection endpoint validates exchanged tokens, completing the lifecycle.
 
-Across these approaches, JWTForge can produce either compact JWTs or JWS JSON Serialization outputs. The latter enables format-confusion testing: a vulnerable JWT implementation misidentifies the JWT serialization format, allowing an attacker to transform an otherwise legitimate compact-format JWT into a JSON-format JWS, insert forged payload material, and potentially achieve arbitrary token forgery. This corresponds to the polyglot-token class in prior JWT research [@tervoort2023three]. In OAuth2/OIDC bearer-token contexts that document compact JWTs, flattened or general JWS JSON inputs should be rejected unless explicitly supported by the application contract.
+Across these approaches, JWTForge can produce either compact JWTs or JWS JSON Serialization outputs. The latter enables format-confusion testing: a vulnerable JWT implementation misidentifies the JWT serialization format, allowing an attacker to transform an otherwise legitimate compact-format JWT into a JSON-format JWS, insert forged payload material, and potentially achieve arbitrary token forgery. This corresponds to the polyglot-token class in prior JWT research [@tervoort2023three].
 
 ## Workflow Scenarios
 
@@ -141,18 +136,16 @@ JWTForge enables several lines of research on authentication, authorization, and
 
 **Observability research in microservice architectures.** Empirical studies of microservices — collection of logs, metrics, and traces under authentication load — require reproducible token streams without the confounders of production identity providers [@bakhtin2025lo2; @nugraha2023performance]. JWTForge provides deterministic generation at sustained throughput (586 requests/second, 12 ms mean latency, zero error rate across 74,315 requests on a Mac M2 Pro), enabling controlled studies of authentication overhead and trace propagation across OAuth2-protected service meshes.
 
-**JWT library performance and security evaluation.** Researchers studying JWT library performance across runtimes [@rahmatulloh2019performance] and security defects in validation logic [@yang2026token; @nugraha2023performance] currently construct ad hoc corpora. JWTForge's four modes supply reproducible corpora spanning realistic, stochastic, adversarial, and categorical patterns. Grammar mode supports systematic comparative evaluation: a fixed `(claim, grammar_category)` tuple yields the same input set across runs and libraries under test.
-
-**Vulnerability discovery in OAuth2/OIDC implementations.** Research on JWT vulnerabilities — including key confusion [@xu2023jwtkey] and structural weaknesses [@zulkarneev2024json] — relies on adversarial token construction. JWTForge's malicious mode (ten injection categories) and `header_alg`/`header_kid` transformations operationalise these vectors as API parameters, lowering the marginal cost of constructing new attack variants.
+**Security evaluation and vulnerability discovery.** Researchers studying JWT performance and validation defects often construct ad hoc corpora [@rahmatulloh2019performance; @yang2026token; @nugraha2023performance]. JWTForge supplies reproducible realistic, stochastic, adversarial, and categorical token sets. Its malicious mode, grammar mode, and header transformations operationalise key confusion [@xu2023jwtkey], injection, format-confusion, and claim-handling tests as API parameters.
 
 **Black-box measurement studies.** Large-scale automated measurement of authentication implementations [@costa2026automated] requires combining token mutation with original request context replay. JWTForge's RFC 8693 token exchange [@rfc8693] supports this directly: a captured token can be exchanged into a mutated variant while preserving the surrounding request context.
 
 # Availability
 
-JWTForge is freely available from [GitHub](https://github.com/abhishektiwari/jwtforge) under the MIT license, with interactive OpenAPI documentation. The software can be installed via via `npm install -g abhishektiwari/jwtforge` for local CLI use or CI/CD automation, or deployed with one click to Cloudflare Workers for self-hosted access. A public hosted instance is available at [https://jwtforge.dev](https://jwtforge.dev) for immediate browser-based token generation and testing without installation.
+JWTForge is freely available from [GitHub](https://github.com/abhishektiwari/jwtforge) under the MIT license, with interactive OpenAPI documentation. The software can be installed locally via via `npm install -g abhishektiwari/jwtforge` for CLI use or CI/CD automation, or deployed with one click to Cloudflare Workers for self-hosted access. A public hosted instance is available at [https://jwtforge.dev](https://jwtforge.dev) for immediate browser-based token generation and testing without installation.
 
 # AI usage disclosure
 
-AI tools were used for developing JWTForge, as well as for refactoring, test scaffolding, and documentation generation. AI tools were also used to assist with editing portions of this manuscript. All AI-assisted code and documentation outputs were reviewed, edited, validated, and tested by the human author, who takes full responsibility for the final software and paper. No figures or data were generated by AI.
+AI tools were used for developing JWTForge. AI tools were also used to assist with editing portions of this manuscript. All AI-assisted code outputs were reviewed, validated, and tested by the human author, who takes full responsibility for the final software and paper. No figures or data were generated by AI.
 
 # References
