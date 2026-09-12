@@ -15,6 +15,8 @@ JWTForge uses the top-level `mode` field to control how request data is generate
 | `malicious` | Security payload injection | Mutates 1-3 fields with attack strings | Penetration testing and sanitizer validation | `"mode": "malicious"` |
 | `grammar` | Systematic JWT grammar testing | Selects values from claim/header grammar rules | Spec coverage, boundary testing, repeatable security scans | `"mode": "grammar"` |
 
+For explicit operation groups on an imported or generated token, use the separate [Mutation Endpoint](../mutation.md). Mutation is not a `mode` value.
+
 ## Mode Options
 
 | Field | Applies to | Description | Default | Example |

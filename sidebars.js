@@ -11,8 +11,11 @@ const sidebars = {
         'token-endpoint/structured-json',
         'token-endpoint/legacy-flat-json',
         'token-endpoint/signatures',
+        'token-endpoint/token-exchange',
       ],
     },
+    'mutation',
+    'introspection',
     {
       type: 'category',
       label: 'Modes',

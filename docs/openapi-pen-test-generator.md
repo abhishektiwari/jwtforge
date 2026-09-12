@@ -40,7 +40,7 @@ jwtforge pentest run \
   --report generated/pentest-report.json
 ```
 
-The runner requests fresh JWTs from JWTForge and checks missing tokens, valid authorization, insufficient privileges, and known JWT vulnerability scenarios. Signature, time, issuer, audience, key-ID bypass, and format-confusion scenarios require HTTP 401/403. Signed injection and stochastic fuzz probes are reported as observations and fail only on server errors because acceptance alone does not prove that an untrusted JWT header or claim reached a vulnerable sink. POST, PUT, PATCH, and DELETE operations are skipped unless `--allow-write-methods` is provided.
+The runner requests fresh JWTs from JWTForge and checks missing tokens, valid authorization, insufficient privileges, and known JWT vulnerability scenarios. For signature tampering, it first confirms that the exact compact baseline token is accepted by the protected operation, then calls `/mutation` to remove, replace, truncate, or flip one bit in its signature while preserving the header and payload. Each mutated token must receive HTTP 401/403. Time, issuer, audience, key-ID bypass, and format-confusion scenarios also require HTTP 401/403. Signed injection and stochastic fuzz probes are reported as observations and fail only on server errors because acceptance alone does not prove that an untrusted JWT header or claim reached a vulnerable sink. POST, PUT, PATCH, and DELETE operations are skipped unless `--allow-write-methods` is provided.
 
 Format-confusion scenarios serialize flattened and general JWS JSON tokens into the `Authorization: Bearer` header. APIs documented as accepting compact OAuth2/OIDC bearer JWTs should reject those values.
 

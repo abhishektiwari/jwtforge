@@ -49,6 +49,7 @@ export function buildJwtHeader(keyData, headerOverrides = {}) {
 }
 
 function normalizeMode(mode) {
+  if (mode === 'mutation') throw new Error('Mutation is not a token mode. Use POST /mutation.');
   if (mode === 'malcious') return 'malicious';
   if (mode === 'grammer') return 'grammar';
   return mode || 'fake';

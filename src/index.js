@@ -14,6 +14,7 @@ import { faker } from '@faker-js/faker';
 import { getCompleteGrammar } from './grammar.js';
 import { applyVulnerabilityPreset, buildJwtHeader, normalizeTokenRequest, parseResponseType, removeUndefinedFields } from './tokenrequest.js';
 import { setGrammarFaker } from './grammar-resolver.js';
+import { MutationError, mutateToken, readMutationRequest } from './mutation.js';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
 const memoryCache = new Map();
@@ -547,137 +548,7 @@ async function handleTokenRequest(request, env) {
       );
     }
 
-    const normalized = normalizeTokenRequest(requestData);
-
-    // Generate or use provided client_id
-    if (!clientId) {
-      clientId = normalized.body.client_id || requestData.client_id || generateRandomClientId();
-    }
-    normalized.body.client_id = clientId;
-
-    // Set issuer from request URL if not provided
-    if (!normalized.body.iss) {
-      normalized.body.iss = issuer;
-    }
-
-    // Extract response_type from request (OAuth2/OIDC standard)
-    // Supported values: "token", "id_token", "id_token token", "token id_token"
-    const { shouldGenerateAccessToken, shouldGenerateIdToken } = parseResponseType(
-      normalized.options.responseType
-    );
-
-    // Extract kty from request, default to RSA/RS256
-    const kty = normalized.options.kty || 'RSA';
-    const keyData = await getKeyData(env, kty);
-    applyVulnerabilityPreset(normalized, keyData);
-
-    // Extract mode from request, default to 'fake'
-    // Supported modes: 'fake' (default), 'fuzz', 'malicious', 'grammar'
-    const mode = normalized.options.mode || 'fake';
-
-    // Extract exclude list from request (claims to protect from fuzz/malicious modes)
-    const exclude = Array.isArray(normalized.options.exclude) ? normalized.options.exclude : [];
-
-    // Extract malicious_category for malicious mode (e.g., sql_injection, xss, command_injection)
-    const maliciousCategory = normalized.options.maliciousCategory || null;
-
-    // Extract grammar_category for grammar mode (e.g., valid, edge_cases, injection, vulnerable)
-    const grammarCategory = normalized.options.grammarCategory || null;
-
-    const response = {
-      token_type: 'Bearer',
-      expires_in: normalized.body.exp ? (normalized.body.exp - Math.floor(Date.now() / 1000)) : 3600,
-      algorithm: keyData.alg,
-      key_id: keyData.kid,
-      format: normalized.options.format
-    };
-
-    // Get default claims based on requested scopes (only for 'fake' mode)
-    const scopeDefaults = mode === 'fake' ? getDefaultClaimsFromScope(normalized.body.scope) : {};
-
-    // Load grammar for grammar mode
-    let headerOverrides = {};
-    const headerRequestData = {
-      ...normalized.body,
-      ...requestData,
-      header: normalized.header,
-      malicious_category: maliciousCategory
-    };
-    if (mode === 'grammar') {
-      const grammar = getCompleteGrammar();
-      headerOverrides = applyGrammarHeaderTransformations(headerRequestData, grammar, exclude, grammarCategory);
-    } else {
-      // Apply header transformations (for alg and kid) for fuzz/malicious modes
-      headerOverrides = applyHeaderTransformations(headerRequestData, mode, exclude);
-    }
-
-    // Generate access token
-    if (shouldGenerateAccessToken) {
-      let accessTokenClaims = {
-        ...scopeDefaults,    // Default claims from scopes
-        ...normalized.body   // User-provided claims (override defaults)
-      };
-
-      // Apply mode transformations (fuzz/malicious/grammar) with exclusions
-      if (mode === 'grammar') {
-        const grammar = getCompleteGrammar();
-        accessTokenClaims = applyGrammarTransformations(accessTokenClaims, grammar, exclude, grammarCategory);
-      } else if (mode === 'malicious') {
-        // Pass maliciousCategory through internal field for getMaliciousValue
-        accessTokenClaims.__maliciousCategory = maliciousCategory;
-        accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
-        delete accessTokenClaims.__maliciousCategory;
-      } else {
-        accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
-      }
-
-      const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, normalized.signature, {
-        format: normalized.options.format,
-        signatures: normalized.options.signatures,
-        confusion: normalized.options.confusion
-      });
-      response.access_token = accessToken;
-    }
-
-    // Generate ID token
-    if (shouldGenerateIdToken) {
-      // ID tokens have specific OIDC requirements
-      let idTokenClaims = {
-        ...scopeDefaults,    // Default claims from scopes
-        ...normalized.body,  // User-provided claims (override defaults)
-        // ID tokens should have nonce if provided
-        nonce: normalized.body.nonce,
-        // Add at_hash for hybrid flows if access token is present
-        ...(shouldGenerateAccessToken && response.access_token ? { at_hash: 'placeholder' } : {})
-      };
-
-      // Apply mode transformations (fuzz/malicious/grammar) with exclusions
-      if (mode === 'grammar') {
-        const grammar = getCompleteGrammar();
-        idTokenClaims = applyGrammarTransformations(idTokenClaims, grammar, exclude, grammarCategory);
-      } else if (mode === 'malicious') {
-        // Pass maliciousCategory through internal field for getMaliciousValue
-        idTokenClaims.__maliciousCategory = maliciousCategory;
-        idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
-        delete idTokenClaims.__maliciousCategory;
-      } else {
-        idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
-      }
-
-      const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, normalized.signature, {
-        format: normalized.options.format,
-        signatures: normalized.options.signatures,
-        confusion: normalized.options.confusion
-      });
-      response.id_token = idToken;
-    }
-
-    // Include scope from request or default for hybrid flows
-    if (normalized.body.scope) {
-      response.scope = normalized.body.scope;
-    } else if (shouldGenerateAccessToken && shouldGenerateIdToken) {
-      response.scope = 'openid profile email';
-    }
+    const response = await generateTokenResponse(requestData, env, issuer, clientId);
 
     return new Response(
       JSON.stringify(response),
@@ -697,6 +568,169 @@ async function handleTokenRequest(request, env) {
         headers: jsonHeaders()
       }
     );
+  }
+}
+
+async function generateTokenResponse(requestData, env, issuer, clientId = null) {
+  const normalized = normalizeTokenRequest(requestData);
+
+  // Generate or use provided client_id
+  if (!clientId) {
+    clientId = normalized.body.client_id || requestData.client_id || generateRandomClientId();
+  }
+  normalized.body.client_id = clientId;
+
+  // Set issuer from request URL if not provided
+  if (!normalized.body.iss) {
+    normalized.body.iss = issuer;
+  }
+
+  // Extract response_type from request (OAuth2/OIDC standard)
+  // Supported values: "token", "id_token", "id_token token", "token id_token"
+  const { shouldGenerateAccessToken, shouldGenerateIdToken } = parseResponseType(
+    normalized.options.responseType
+  );
+
+  // Extract kty from request, default to RSA/RS256
+  const kty = normalized.options.kty || 'RSA';
+  const keyData = await getKeyData(env, kty);
+  applyVulnerabilityPreset(normalized, keyData);
+
+  // Extract mode from request, default to 'fake'
+  // Supported modes: 'fake' (default), 'fuzz', 'malicious', 'grammar'
+  const mode = normalized.options.mode || 'fake';
+
+  // Extract exclude list from request (claims to protect from fuzz/malicious modes)
+  const exclude = Array.isArray(normalized.options.exclude) ? normalized.options.exclude : [];
+
+  // Extract malicious_category for malicious mode (e.g., sql_injection, xss, command_injection)
+  const maliciousCategory = normalized.options.maliciousCategory || null;
+
+  // Extract grammar_category for grammar mode (e.g., valid, edge_cases, injection, vulnerable)
+  const grammarCategory = normalized.options.grammarCategory || null;
+
+  const response = {
+    token_type: 'Bearer',
+    expires_in: normalized.body.exp ? (normalized.body.exp - Math.floor(Date.now() / 1000)) : 3600,
+    algorithm: keyData.alg,
+    key_id: keyData.kid,
+    format: normalized.options.format
+  };
+
+  // Get default claims based on requested scopes (only for 'fake' mode)
+  const scopeDefaults = mode === 'fake' ? getDefaultClaimsFromScope(normalized.body.scope) : {};
+
+  // Load grammar for grammar mode
+  let headerOverrides = {};
+  const headerRequestData = {
+    ...normalized.body,
+    ...requestData,
+    header: normalized.header,
+    malicious_category: maliciousCategory
+  };
+  if (mode === 'grammar') {
+    const grammar = getCompleteGrammar();
+    headerOverrides = applyGrammarHeaderTransformations(headerRequestData, grammar, exclude, grammarCategory);
+  } else {
+    // Apply header transformations (for alg and kid) for fuzz/malicious modes
+    headerOverrides = applyHeaderTransformations(headerRequestData, mode, exclude);
+  }
+
+  // Generate access token
+  if (shouldGenerateAccessToken) {
+    let accessTokenClaims = {
+      ...scopeDefaults,    // Default claims from scopes
+      ...normalized.body   // User-provided claims (override defaults)
+    };
+
+    // Apply mode transformations (fuzz/malicious/grammar) with exclusions
+    if (mode === 'grammar') {
+      const grammar = getCompleteGrammar();
+      accessTokenClaims = applyGrammarTransformations(accessTokenClaims, grammar, exclude, grammarCategory);
+    } else if (mode === 'malicious') {
+      // Pass maliciousCategory through internal field for getMaliciousValue
+      accessTokenClaims.__maliciousCategory = maliciousCategory;
+      accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
+      delete accessTokenClaims.__maliciousCategory;
+    } else {
+      accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
+    }
+
+    const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, normalized.signature, {
+      format: normalized.options.format,
+      signatures: normalized.options.signatures,
+      confusion: normalized.options.confusion
+    });
+    response.access_token = accessToken;
+  }
+
+  // Generate ID token
+  if (shouldGenerateIdToken) {
+    // ID tokens have specific OIDC requirements
+    let idTokenClaims = {
+      ...scopeDefaults,    // Default claims from scopes
+      ...normalized.body,  // User-provided claims (override defaults)
+      // ID tokens should have nonce if provided
+      nonce: normalized.body.nonce,
+      // Add at_hash for hybrid flows if access token is present
+      ...(shouldGenerateAccessToken && response.access_token ? { at_hash: 'placeholder' } : {})
+    };
+
+    // Apply mode transformations (fuzz/malicious/grammar) with exclusions
+    if (mode === 'grammar') {
+      const grammar = getCompleteGrammar();
+      idTokenClaims = applyGrammarTransformations(idTokenClaims, grammar, exclude, grammarCategory);
+    } else if (mode === 'malicious') {
+      // Pass maliciousCategory through internal field for getMaliciousValue
+      idTokenClaims.__maliciousCategory = maliciousCategory;
+      idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
+      delete idTokenClaims.__maliciousCategory;
+    } else {
+      idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
+    }
+
+    const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, normalized.signature, {
+      format: normalized.options.format,
+      signatures: normalized.options.signatures,
+      confusion: normalized.options.confusion
+    });
+    response.id_token = idToken;
+  }
+
+  // Include scope from request or default for hybrid flows
+  if (normalized.body.scope) {
+    response.scope = normalized.body.scope;
+  } else if (shouldGenerateAccessToken && shouldGenerateIdToken) {
+    response.scope = 'openid profile email';
+  }
+
+  return response;
+}
+
+async function handleMutationRequest(request, env) {
+  if (request.method !== 'POST') {
+    return new Response(JSON.stringify({ error: 'Method not allowed. Use POST.' }), {
+      status: 405, headers: jsonHeaders({ Allow: 'POST' })
+    });
+  }
+  try {
+    const input = await readMutationRequest(request);
+    let token = input.token;
+    if (Object.prototype.hasOwnProperty.call(input, 'source')) {
+      const issuer = env?.ISSUER || new URL(request.url).origin;
+      const generated = await generateTokenResponse({ ...input.source, response_type: 'token' }, env, issuer);
+      token = generated.access_token;
+    }
+    return new Response(JSON.stringify(mutateToken(token, input.mutations)), {
+      status: 200, headers: jsonHeaders()
+    });
+  } catch (error) {
+    const status = error instanceof MutationError ? error.status : 400;
+    return new Response(JSON.stringify({
+      error: status === 413 ? 'payload_too_large' : 'invalid_request',
+      message: error.message,
+      ...(error instanceof MutationError ? error.context : {}),
+    }), { status, headers: jsonHeaders() });
   }
 }
 
@@ -756,6 +790,8 @@ export default {
     // Route handling
     if (path === '/token') {
       return handleTokenRequest(request, env);
+    } else if (path === '/mutation') {
+      return handleMutationRequest(request, env);
     } else if (path === '/introspect') {
       return handleIntrospectionRequest(request, env);
     } else if (path === '/.well-known/jwks.json') {

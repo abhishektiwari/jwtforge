@@ -15,6 +15,26 @@
       "key": "attack_token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "signature_removed_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "signature_replaced_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "signature_truncated_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "signature_bit_flipped_token",
+      "value": "",
+      "type": "string"
     }
   ],
   "item": [
@@ -106,7 +126,202 @@
       ]
     },
     {
-      "name": "2. Algorithm Confusion",
+      "name": "2. Signature Tampering",
+      "description": "Derive signature-only variants from the exact baseline accepted in the previous folder. The protected header and payload remain unchanged.",
+      "item": [
+        {
+          "name": "Mutate Baseline Signatures",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned all signature mutations', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.count).to.eql(4);",
+                  "    pm.expect(jsonData.results.map(function (result) { return result.id; })).to.have.members(['signature-remove', 'signature-replace', 'signature-truncate', 'signature-flip-bit']);",
+                  "});",
+                  "",
+                  "const results = pm.response.json().results;",
+                  "const tokens = {};",
+                  "results.forEach(function (result) { tokens[result.id] = typeof result.token === 'string' ? result.token : JSON.stringify(result.token); });",
+                  "pm.collectionVariables.set('signature_removed_token', tokens['signature-remove']);",
+                  "pm.collectionVariables.set('signature_replaced_token', tokens['signature-replace']);",
+                  "pm.collectionVariables.set('signature_truncated_token', tokens['signature-truncate']);",
+                  "pm.collectionVariables.set('signature_bit_flipped_token', tokens['signature-flip-bit']);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"{{baseline_token}}\",\n  \"mutations\": [\n    {\n      \"id\": \"signature-remove\",\n      \"operations\": [{\"type\": \"signature\", \"operation\": \"remove\"}]\n    },\n    {\n      \"id\": \"signature-replace\",\n      \"operations\": [{\"type\": \"signature\", \"operation\": \"replace\", \"value\": \"AQID\"}]\n    },\n    {\n      \"id\": \"signature-truncate\",\n      \"operations\": [{\"type\": \"signature\", \"operation\": \"truncate\", \"length\": 16}]\n    },\n    {\n      \"id\": \"signature-flip-bit\",\n      \"operations\": [{\"type\": \"signature\", \"operation\": \"flip_bit\", \"byte_index\": 0, \"bit_index\": 0}]\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/mutation",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "mutation"
+              ]
+            },
+            "description": "Create four independent variants from the exact accepted baseline. JWTForge does not re-sign the modified signatures."
+          }
+        },
+        {
+          "name": "Reject Removed Signature",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects token with removed signature', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signature_removed_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "The baseline header and payload are unchanged; only the signature segment is empty."
+          }
+        },
+        {
+          "name": "Reject Replaced Signature",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects token with replaced signature', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signature_replaced_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "The baseline signature is replaced with the literal Base64url value AQID."
+          }
+        },
+        {
+          "name": "Reject Truncated Signature",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects token with truncated signature', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signature_truncated_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "The baseline signature is truncated to 16 bytes while preserving its header and payload."
+          }
+        },
+        {
+          "name": "Reject Bit-Flipped Signature",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects token with one flipped signature bit', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{signature_bit_flipped_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "Exactly one bit in the baseline signature is changed; accepting it indicates missing or defective signature verification."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Algorithm Confusion",
       "description": "Tokens with unsafe or unexpected JWT algorithms must be rejected.",
       "item": [
         {
@@ -340,7 +555,7 @@
       ]
     },
     {
-      "name": "3. Key Injection",
+      "name": "4. Key Injection",
       "description": "Tokens that self-assert key location or key material must be rejected unless explicitly trusted by the verifier.",
       "item": [
         {
@@ -585,7 +800,7 @@
       ]
     },
     {
-      "name": "4. Format Confusion",
+      "name": "5. Format Confusion",
       "description": "JWS JSON Serialization tokens should be rejected by APIs expecting compact OAuth2/OIDC bearer JWTs.",
       "item": [
         {
@@ -822,7 +1037,7 @@
       ]
     },
     {
-      "name": "5. Claim Injection Robustness",
+      "name": "6. Claim Injection Robustness",
       "description": "Signed tokens with malicious claim values should not trigger server errors or injection behavior.",
       "item": [
         {

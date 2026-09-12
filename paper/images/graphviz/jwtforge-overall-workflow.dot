@@ -1,7 +1,8 @@
 digraph jwtforge_generation {
     fontname="Helvetica,Arial,sans-serif"
-    node [fontname="Helvetica,Arial,sans-serif", style=filled]
-    edge [fontname="Helvetica,Arial,sans-serif"]
+    graph [ranksep=0.3, nodesep=0.22, margin=0.03]
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=10, margin="0.08,0.05", style=filled]
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=9]
     rankdir=TB;
     
     json_input [label="JSON Payload\nRequest", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
@@ -10,27 +11,37 @@ digraph jwtforge_generation {
     
     parse [label="Parse Request\nExtract claims,\nparameters", shape=box, fillcolor="#E8F5E9"]
     scope [label="OIDC Scope Processing\n(openid, profile, email,\naddress, phone)", shape=box, fillcolor="#FFF4E6"]
-    extract_claims [label="Extract Claims\nfrom Subject Token\n(or auto-generate)", shape=box, fillcolor="#FFF4E6"]
-    mode_apply [label="Apply Mode Transformations\n(compliant/fuzz/malicious/grammar)", shape=box, fillcolor="#E8F5E9"]
+    extract_claims [label="Decode Subject Claims\n(no signature verification)", shape=box, fillcolor="#FFF4E6"]
+    mode_apply [label="Apply Generation Mode\n(fake/fuzz/malicious/grammar)", shape=box, fillcolor="#E8F5E9"]
     claim_transform [label="Apply Claim Transformation\n(add_claims, remove_claims)", shape=box, fillcolor="#FFF4E6"]
     keystore [label="Key Retrieval\n(RSA/EC from storage)", shape=box, fillcolor="#FCE4EC"]
-    header_fuzz [label="Header Processing\n(alg, kid transformation)", shape=box, fillcolor="#E8F5E9"]
+    header_fuzz [label="Header / Format Processing\n(compact/flattened/general)", shape=box, fillcolor="#E8F5E9"]
     sign [label="JWT Signing\n(Web Crypto API)", shape=box, fillcolor="#E8F5E9"]
-    output [label="HTTP Response\nSigned JWT + Metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
+    output [label="/token Response\nToken + Metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
+    exchange_sign [label="RS256 Signing\n(default claims; compact only)", shape=box, fillcolor="#E8F5E9"]
+    mutation_input [label="POST /mutation\nImported token OR source request", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    mutation_source [label="Resolve One Source\nImport unchanged OR generate\nvia token-generation pipeline", shape=box, fillcolor="#FFF4E6"]
+    mutate [label="Independent Operation Groups\nHeader / claim / signature / format\n(no automatic re-signing)", shape=box, fillcolor="#E8F5E9"]
+    variants [label="Batch Response\nOne variant per group\n+ change metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
     
     json_input -> parse
     oauth_input -> parse
     exchange_input -> extract_claims
     
-    parse -> scope
+    parse -> scope [style=dashed, label="fake mode"]
     scope -> mode_apply
-    parse -> mode_apply [style=dashed, label="if no scope"]
+    parse -> mode_apply [style=dashed, label="other modes"]
     extract_claims -> claim_transform
-    claim_transform -> mode_apply
+    claim_transform -> exchange_sign
+    keystore -> exchange_sign [label="RSA"]
+    exchange_sign -> output
     
     mode_apply -> header_fuzz
     parse -> keystore
     header_fuzz -> sign
     keystore -> sign
     sign -> output
+    mutation_input -> mutation_source
+    mutation_source -> mutate
+    mutate -> variants
 }

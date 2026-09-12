@@ -25,6 +25,8 @@ JWTForge auto-detects structured JSON when the request contains any of these top
 
 If none of those fields are present, JWTForge treats the request as the legacy flat claim model.
 
+To derive multiple variants from an imported or generated token, use the separate [Mutation Endpoint](../mutation.md). `POST /mutation` accepts `token` or `source` plus explicit `mutations` groups and returns `results[]`; mutation is not a `/token` mode.
+
 ## Minimal Request
 
 ```json

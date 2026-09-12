@@ -29,6 +29,7 @@ npx jwtforge help
 | --- | --- | --- |
 | `jwtforge start` | Start the local JWTForge Worker server in the background | `jwtforge start` |
 | `jwtforge token [payload]` | Generate a token by posting JSON to `/token` | `jwtforge token '{"body":{"sub":"user123"}}'` |
+| `jwtforge mutation <payload>` | Produce variants through `/mutation` | See [Mutation Endpoint](./mutation.md#cli-and-cicd) |
 | `jwtforge status` | Check whether JWTForge is listening locally | `jwtforge status` |
 | `jwtforge stop` | Stop the local JWTForge server | `jwtforge stop` |
 | `jwtforge help` | Show CLI help | `jwtforge help` |
