@@ -1,7 +1,8 @@
 digraph cicd_workflow {
     fontname="Helvetica,Arial,sans-serif"
-    node [fontname="Helvetica,Arial,sans-serif", style=filled]
-    edge [fontname="Helvetica,Arial,sans-serif"]
+    graph [ranksep=0.35, nodesep=0.28, margin=0.03]
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=10, margin="0.08,0.05", style=filled]
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=9]
     rankdir=TB;
 
     commit [label="Developer Commits\nAPI Code Change", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
@@ -15,6 +16,10 @@ digraph cicd_workflow {
     decision [label="All Tests\nPass?", shape=diamond, fillcolor="#FFF9C4"]
     fail [label="Fail - Notify\nDeveloper", shape=box, fillcolor="#FFEBEE", style="filled,rounded"]
     deploy_beta [label="Deploy to\nBeta/Gamma/Prod", shape=box, fillcolor="#E8F5F5", style="filled,rounded"]
+
+    { rank=same; deploy_local; jwtforge }
+    { rank=same; openapi; pentest }
+    { rank=same; fail; deploy_beta }
 
     commit -> trigger
     trigger -> deploy_local
