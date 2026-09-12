@@ -19,6 +19,7 @@ A lightweight JWT token vending service for testing purposes, deployable on Clou
 
 - Generates signed, unsigned, malformed, and literal-signature JWTs.
 - Supports structured JSON requests with explicit `header`, `body`, and `signature` objects.
+- Generates compact JWTs, JWS Flattened JSON Serialization, and JWS General JSON Serialization for parser boundary testing.
 - Keeps backward compatibility with the legacy flat claim model.
 - Provides `fake`, `fuzz`, `malicious`, and `grammar` testing modes.
 - Supports known JWT attack presets such as `alg_none`, RS/HS confusion, `kid` traversal, `jku` injection, embedded JWK, and format confusion.
@@ -54,6 +55,12 @@ Generate a security testing token:
 
 ```bash
 jwtforge token '{"vulnerability":"alg_none","alg_none_variant":"nOne","body":{"sub":"admin"}}'
+```
+
+Generate a format-confusion token:
+
+```bash
+jwtforge token '{"vulnerability":"format_confusion","body":{"sub":"user123","scope":"read write"}}'
 ```
 
 Stop the local server:
