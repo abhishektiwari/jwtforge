@@ -1,24 +1,34 @@
 digraph cicd_workflow {
     fontname="Helvetica,Arial,sans-serif"
-    node [fontname="Helvetica,Arial,sans-serif", style=filled]
-    edge [fontname="Helvetica,Arial,sans-serif"]
+    graph [ranksep=0.35, nodesep=0.28, margin=0.03]
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=10, margin="0.08,0.05", style=filled]
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=9]
     rankdir=TB;
 
     commit [label="Developer Commits\nAPI Code Change", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
     trigger [label="CI/CD Pipeline\nTriggered", shape=box, fillcolor="#FFF4E6"]
     deploy_local [label="Deploy Changed API\nLocally", shape=box, fillcolor="#E8F5E9"]
     jwtforge [label="Start Local\nJWTForge Instance", shape=box, fillcolor="#FCE4EC"]
-    postman [label="Run End-to-End Tests\n(Postman/Newman or Custom Runner)", shape=box, fillcolor="#E8F5E9"]
-    security_test [label="Execute Security Scenarios\n(compliance/fuzz/malicious/grammar)", shape=box, fillcolor="#FFF4E6"]
+    openapi [label="Load OpenAPI Spec\n(Discover Protected Endpoints)", shape=box, fillcolor="#E8F4F8"]
+    pentest [label="Generate JWT Pentest Plan\n(authn/authz/vulnerability probes)", shape=box, fillcolor="#FFF4E6"]
+    postman [label="Run End-to-End and Pentest Suites\n(Postman/Newman or Custom Runner)", shape=box, fillcolor="#E8F5E9"]
+    security_test [label="Execute Security Scenarios\n(compliance/fuzz/malicious/grammar/format confusion)", shape=box, fillcolor="#FFF4E6"]
     decision [label="All Tests\nPass?", shape=diamond, fillcolor="#FFF9C4"]
     fail [label="Fail - Notify\nDeveloper", shape=box, fillcolor="#FFEBEE", style="filled,rounded"]
     deploy_beta [label="Deploy to\nBeta/Gamma/Prod", shape=box, fillcolor="#E8F5F5", style="filled,rounded"]
 
+    { rank=same; deploy_local; jwtforge }
+    { rank=same; openapi; pentest }
+    { rank=same; fail; deploy_beta }
+
     commit -> trigger
     trigger -> deploy_local
     trigger -> jwtforge
+    deploy_local -> openapi
+    openapi -> pentest
+    jwtforge -> pentest
+    pentest -> postman
     deploy_local -> postman
-    jwtforge -> postman
     postman -> security_test
     security_test -> decision
     decision -> fail [label="No"]

@@ -585,7 +585,244 @@
       ]
     },
     {
-      "name": "4. Claim Injection Robustness",
+      "name": "4. Format Confusion",
+      "description": "JWS JSON Serialization tokens should be rejected by APIs expecting compact OAuth2/OIDC bearer JWTs.",
+      "item": [
+        {
+          "name": "Generate Flattened JWS JSON Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned flattened JWS JSON token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const token = jsonData.access_token || jsonData.id_token;",
+                  "    pm.expect(token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', typeof token === 'string' ? token : JSON.stringify(token));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vulnerability\": \"format_confusion\",\n  \"format\": \"flattened\",\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a JWS Flattened JSON Serialization token. The response access_token is a JSON object, serialized into the attack_token variable for bearer-token testing."
+          }
+        },
+        {
+          "name": "Reject Flattened JWS JSON Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects flattened JWS JSON bearer token', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "A secure compact-JWT bearer-token verifier should reject JWS JSON Serialization in the Authorization header."
+          }
+        },
+        {
+          "name": "Generate General JWS JSON Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned general JWS JSON token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const token = jsonData.access_token || jsonData.id_token;",
+                  "    pm.expect(token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', typeof token === 'string' ? token : JSON.stringify(token));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"general\",\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"admin-user\",\n    \"roles\": [\"admin\"],\n    \"scope\": \"admin\"\n  },\n  \"signatures\": [\n    {\n      \"header\": {\n        \"kid\": \"rsa-key-1\"\n      }\n    },\n    {\n      \"header\": {\n        \"kid\": \"alternate-rsa-key\",\n        \"alg\": \"RS256\"\n      },\n      \"signature\": \"literal-secondary-signature\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a JWS General JSON Serialization token with multiple signatures."
+          }
+        },
+        {
+          "name": "Reject General JWS JSON Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects general JWS JSON bearer token', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "A secure compact-JWT bearer-token verifier should reject JWS General JSON Serialization."
+          }
+        },
+        {
+          "name": "Generate Conflicting Payload Hint Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned payload-hint format confusion token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    const token = jsonData.access_token || jsonData.id_token;",
+                  "    pm.expect(token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', typeof token === 'string' ? token : JSON.stringify(token));",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"format\": \"general\",\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"security-test-user\",\n    \"roles\": [\"user\"],\n    \"scope\": \"read:data\"\n  },\n  \"signatures\": [\n    {\n      \"header\": {\n        \"kid\": \"rsa-key-1\"\n      }\n    },\n    {\n      \"header\": {\n        \"kid\": \"alternate-rsa-key\",\n        \"alg\": \"RS256\"\n      },\n      \"signature\": false\n    }\n  ],\n  \"confusion\": {\n    \"payload_hint\": {\n      \"iss\": \"https://invalid-issuer.example.com\",\n      \"aud\": \"invalid-audience\",\n      \"sub\": \"format-confusion-attacker\",\n      \"roles\": [\"admin\"],\n      \"scope\": \"admin\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a JWS General JSON token with a non-standard conflicting decoded-payload hint. The target should not parse or trust this JSON bearer value."
+          }
+        },
+        {
+          "name": "Reject Conflicting Payload Hint Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Target rejects conflicting payload-hint bearer token', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "A secure API should reject JSON-form bearer tokens and must not read any non-standard payload hint."
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Claim Injection Robustness",
       "description": "Signed tokens with malicious claim values should not trigger server errors or injection behavior.",
       "item": [
         {

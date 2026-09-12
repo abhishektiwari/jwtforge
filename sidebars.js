@@ -27,6 +27,7 @@ const sidebars = {
         'attacks/kid-injection',
         'attacks/jku-injection',
         'attacks/embedded-jwk',
+        'attacks/format-confusion',
       ],
     },
     'evaluation',

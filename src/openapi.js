@@ -62,7 +62,7 @@ export function getOpenAPISpec(baseUrl) {
                     },
                     vulnerability: {
                       type: 'string',
-                      enum: ['alg_none', 'rs_hs_confusion', 'kid_traversal', 'jku_injection', 'embedded_jwk'],
+                      enum: ['alg_none', 'rs_hs_confusion', 'kid_traversal', 'jku_injection', 'embedded_jwk', 'format_confusion'],
                       description: 'Known JWT vulnerability preset. Applies to the header/signature model before mode transformations.'
                     },
                     alg_none_variant: {
@@ -87,6 +87,12 @@ export function getOpenAPISpec(baseUrl) {
                         type: 'string'
                       },
                       description: 'List of claim names to exclude from fuzz/malicious transformations (e.g., ["exp", "nbf", "iat"] to create infinitely valid tokens). Always protected: iss, jti'
+                    },
+                    format: {
+                      type: 'string',
+                      enum: ['compact', 'flattened', 'general'],
+                      default: 'compact',
+                      description: 'JOSE output format. compact returns the normal header.payload.signature string. flattened returns JWS Flattened JSON Serialization. general returns JWS General JSON Serialization with one or more signatures.'
                     },
                     header: {
                       type: 'object',
@@ -117,6 +123,44 @@ export function getOpenAPISpec(baseUrl) {
                         { type: 'string' }
                       ],
                       description: 'JWT signature control. Omit to sign normally, set false for an unsigned trailing-dot token, or provide a literal signature segment string.'
+                    },
+                    signatures: {
+                      type: 'array',
+                      description: 'Signature entries for format=general. Each entry can override protected header fields, add an unprotected header object, or force a false/literal signature.',
+                      items: {
+                        type: 'object',
+                        properties: {
+                          header: {
+                            type: 'object',
+                            description: 'Protected header overrides for this signature.',
+                            additionalProperties: true
+                          },
+                          unprotected: {
+                            type: 'object',
+                            description: 'Unprotected JWS JSON header for this signature.',
+                            additionalProperties: true
+                          },
+                          signature: {
+                            oneOf: [
+                              { type: 'boolean', enum: [false] },
+                              { type: 'string' }
+                            ],
+                            description: 'Omit to sign normally, false for an empty signature value, or a string for a literal signature value.'
+                          }
+                        },
+                        additionalProperties: false
+                      }
+                    },
+                    confusion: {
+                      type: 'object',
+                      description: 'Optional format-confusion metadata. payload_hint can add a non-standard decoded payload hint to JSON JWS outputs for parser confusion testing.',
+                      properties: {
+                        payload_hint: {
+                          type: 'object',
+                          additionalProperties: true
+                        }
+                      },
+                      additionalProperties: true
                     },
                     header_alg: {
                       type: 'string',
@@ -319,11 +363,17 @@ export function getOpenAPISpec(baseUrl) {
                     type: 'object',
                     properties: {
                       access_token: {
-                        type: 'string',
+                        oneOf: [
+                          { type: 'string' },
+                          { type: 'object', additionalProperties: true }
+                        ],
                         description: 'The access token JWT (present if response_type is "token" or "id_token token")'
                       },
                       id_token: {
-                        type: 'string',
+                        oneOf: [
+                          { type: 'string' },
+                          { type: 'object', additionalProperties: true }
+                        ],
                         description: 'The ID token JWT (present if response_type is "id_token" or "id_token token")'
                       },
                       token_type: {
@@ -348,6 +398,11 @@ export function getOpenAPISpec(baseUrl) {
                         type: 'string',
                         example: 'rsa-key-1',
                         description: 'Key ID (kid) used for signing'
+                      },
+                      format: {
+                        type: 'string',
+                        enum: ['compact', 'flattened', 'general'],
+                        description: 'JOSE output format used for generated token fields.'
                       },
                       issued_token_type: {
                         type: 'string',
