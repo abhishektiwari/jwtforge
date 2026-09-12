@@ -21,7 +21,7 @@ A lightweight JWT token vending service for testing purposes, deployable on Clou
 - Supports structured JSON requests with explicit `header`, `body`, and `signature` objects.
 - Keeps backward compatibility with the legacy flat claim model.
 - Provides `fake`, `fuzz`, `malicious`, and `grammar` testing modes.
-- Supports known JWT attack presets such as `alg_none`, RS/HS confusion, `kid` traversal, `jku` injection, and embedded JWK.
+- Supports known JWT attack presets such as `alg_none`, RS/HS confusion, `kid` traversal, `jku` injection, embedded JWK, and format confusion.
 - Provides OIDC discovery, JWKS, token introspection, OAuth2 client credentials, and RFC 8693 token exchange.
 - Includes an OpenAPI Pen Test Generator that generates and directly runs authentication, authorization, and JWT vulnerability tests from OpenAPI specifications.
 - Runs locally, in CI/CD, or on Cloudflare Workers.
@@ -179,6 +179,7 @@ Token endpoint documentation:
 | [Header fields](https://jwtforge.dev/docs/reference/header-fields/) | Supported JWT header fields, rejected certificate-chain fields, defaults, examples, and security notes |
 | [OIDC/OAuth2 claims](https://jwtforge.dev/docs/reference/oidc-oauth2-claims/) | Supported standard claims, custom claims, defaults, examples, and claim metadata rules |
 | [OIDC scopes](https://jwtforge.dev/docs/reference/oidc-scopes/) | Scope-driven claim population for `openid`, `profile`, `email`, `address`, and `phone` |
+| [Format Confusion](https://jwtforge.dev/docs/attacks/format-confusion/) | Flattened and general JWS JSON Serialization tokens for compact JWT parser-boundary testing |
 
 ## Testing Modes
 

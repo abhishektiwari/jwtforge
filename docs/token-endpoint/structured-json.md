@@ -15,6 +15,7 @@ Structured JSON is the recommended request model for new JWTForge tests. It maps
 | `header` | JWT header | Header parameters such as `alg`, `typ`, `kid`, `jku`, and `jwk` |
 | `body` | JWT payload | Standard, OIDC, OAuth2, and custom claims |
 | `signature` | JWT signature | Normal signing, unsigned token, or literal signature segment |
+| `format` | JOSE serialization | Compact JWT, flattened JWS JSON, or general JWS JSON output |
 
 JWTForge auto-detects structured JSON when the request contains any of these top-level fields:
 
@@ -272,6 +273,97 @@ Pass a string to force a literal signature segment:
 
 Private-key signing from request payloads is reserved for a future extension.
 
+## Output Format
+
+JWTForge returns compact JWT strings by default:
+
+```json
+{
+  "format": "compact",
+  "body": {
+    "sub": "user123"
+  }
+}
+```
+
+Use `format: "flattened"` to return JWS Flattened JSON Serialization:
+
+```json
+{
+  "format": "flattened",
+  "body": {
+    "sub": "user123",
+    "scope": "read write"
+  }
+}
+```
+
+<DocsTokenExample
+  request={{
+    format: 'flattened',
+    body: {
+      sub: 'user123',
+      scope: 'read write',
+    },
+  }}
+/>
+
+Use `format: "general"` with `signatures` to return JWS General JSON Serialization:
+
+```json
+{
+  "format": "general",
+  "body": {
+    "sub": "user123"
+  },
+  "signatures": [
+    {
+      "header": {
+        "kid": "rsa-key-1"
+      }
+    },
+    {
+      "header": {
+        "kid": "alternate-rsa-key",
+        "alg": "RS256"
+      },
+      "signature": "literal-secondary-signature"
+    }
+  ]
+}
+```
+
+<DocsTokenExample
+  request={{
+    format: 'general',
+    body: {
+      sub: 'user123',
+    },
+    signatures: [
+      {
+        header: {
+          kid: 'rsa-key-1',
+        },
+      },
+      {
+        header: {
+          kid: 'alternate-rsa-key',
+          alg: 'RS256',
+        },
+        signature: 'literal-secondary-signature',
+      },
+    ],
+  }}
+/>
+
+Supported values:
+
+| Format | Response token shape | Purpose |
+| --- | --- | --- |
+| `compact` | JWT string | Default OAuth2/OIDC bearer-token format |
+| `flattened` | JWS JSON object with `payload`, `protected`, and `signature` | Format-confusion and parser-boundary testing |
+| `general` | JWS JSON object with `payload` and `signatures[]` | Multiple-signature parser testing |
+
 ## Modes With Structured JSON
 
 Modes work with structured JSON. JWTForge applies body transformations to `body` claims and header transformations to supported `header` fields.
@@ -451,6 +543,7 @@ Supported presets:
 | `kid_traversal` | Sets `header.kid` to a traversal-style value |
 | `jku_injection` | Sets `header.jku` to an attacker-style JWKS URL |
 | `embedded_jwk` | Embeds the current public JWK in `header.jwk` |
+| `format_confusion` | Uses JWS JSON Serialization instead of compact JWT output; defaults compact requests to `format: "flattened"` |
 
 Presets apply before mode transformations, so use `exclude` when a mode should not mutate a preset field.
 

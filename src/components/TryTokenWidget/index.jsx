@@ -93,17 +93,37 @@ function decodeJwtPart(value) {
   }
 }
 
-function decodeJwt(token) {
-  if (!token || typeof token !== 'string') {
+function decodeJoseToken(token) {
+  if (!token) {
     return { header: null, body: null, signature: '' };
   }
 
-  const [header, body, signature = ''] = token.split('.');
-  return {
-    header: decodeJwtPart(header),
-    body: decodeJwtPart(body),
-    signature,
-  };
+  if (typeof token === 'string') {
+    const [header, body, signature = ''] = token.split('.');
+    return {
+      header: decodeJwtPart(header),
+      body: decodeJwtPart(body),
+      signature,
+    };
+  }
+
+  if (typeof token === 'object' && token.payload) {
+    const signatures = Array.isArray(token.signatures) ? token.signatures : [token];
+    const firstSignature = signatures[0] || {};
+    return {
+      header: decodeJwtPart(firstSignature.protected),
+      body: decodeJwtPart(token.payload),
+      signature: Array.isArray(token.signatures)
+        ? signatures.map((entry, index) => ({
+            index,
+            header: entry.header || null,
+            signature: entry.signature || '',
+          }))
+        : token.signature || '',
+    };
+  }
+
+  return { header: null, body: null, signature: '' };
 }
 
 const initialExample = tokenExampleOptions[0];
@@ -119,7 +139,7 @@ export default function TryTokenWidget() {
 
   const parsedRequest = useMemo(() => safeJsonParse(requestJson), [requestJson]);
   const token = response?.access_token || response?.id_token || '';
-  const decoded = useMemo(() => decodeJwt(token), [token]);
+  const decoded = useMemo(() => decodeJoseToken(token), [token]);
   const baseUrl = useMemo(
     () => getApiBaseUrl(configuredApiBaseUrl),
     [configuredApiBaseUrl]
@@ -218,7 +238,7 @@ export default function TryTokenWidget() {
         </div>
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Signature</div>
-          <pre>{token ? (decoded.signature || '(empty signature segment)') : 'No token yet'}</pre>
+          <JsonOutput value={token ? (decoded.signature || '(empty signature segment)') : null} emptyText="No token yet" />
         </div>
       </div>
     </section>

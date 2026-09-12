@@ -141,6 +141,52 @@ export const tokenExamples = {
       }
     }
   },
+  flattenedFormat: {
+    group: 'Format confusion',
+    summary: 'Flattened JWS JSON',
+    value: {
+      format: 'flattened',
+      body: {
+        sub: 'user123',
+        scope: 'read write'
+      }
+    }
+  },
+  generalFormat: {
+    group: 'Format confusion',
+    summary: 'General JWS JSON with multiple signatures',
+    value: {
+      format: 'general',
+      body: {
+        sub: 'user123',
+        scope: 'read write'
+      },
+      signatures: [
+        {
+          header: {
+            kid: 'rsa-key-1'
+          }
+        },
+        {
+          header: {
+            kid: 'alternate-rsa-key',
+            alg: 'RS256'
+          },
+          signature: 'literal-secondary-signature'
+        }
+      ]
+    }
+  },
+  formatConfusionPreset: {
+    group: 'Format confusion',
+    summary: 'Format confusion preset',
+    value: {
+      vulnerability: 'format_confusion',
+      body: {
+        sub: 'user123'
+      }
+    }
+  },
   oidc: {
     group: 'Claims',
     summary: 'Full OIDC profile',

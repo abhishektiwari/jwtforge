@@ -52,17 +52,37 @@ function decodeJwtPart(value) {
   }
 }
 
-function decodeJwt(token) {
-  if (!token || typeof token !== 'string') {
+function decodeJoseToken(token) {
+  if (!token) {
     return { header: null, body: null, signature: '' };
   }
 
-  const [header, body, signature = ''] = token.split('.');
-  return {
-    header: decodeJwtPart(header),
-    body: decodeJwtPart(body),
-    signature,
-  };
+  if (typeof token === 'string') {
+    const [header, body, signature = ''] = token.split('.');
+    return {
+      header: decodeJwtPart(header),
+      body: decodeJwtPart(body),
+      signature,
+    };
+  }
+
+  if (typeof token === 'object' && token.payload) {
+    const signatures = Array.isArray(token.signatures) ? token.signatures : [token];
+    const firstSignature = signatures[0] || {};
+    return {
+      header: decodeJwtPart(firstSignature.protected),
+      body: decodeJwtPart(token.payload),
+      signature: Array.isArray(token.signatures)
+        ? signatures.map((entry, index) => ({
+            index,
+            header: entry.header || null,
+            signature: entry.signature || '',
+          }))
+        : token.signature || '',
+    };
+  }
+
+  return { header: null, body: null, signature: '' };
 }
 
 export default function DocsTokenExample({ request }) {
@@ -80,7 +100,7 @@ export default function DocsTokenExample({ request }) {
   const curl = `curl -X POST ${endpoint} \\
   -H "Content-Type: application/json" \\
   -d '${prettyJson(request)}'`;
-  const decoded = useMemo(() => decodeJwt(token), [token]);
+  const decoded = useMemo(() => decodeJoseToken(token), [token]);
   const decodedOutput = token
     ? {
         header: decoded.header,

@@ -15,10 +15,15 @@ const METADATA_FIELDS = [
   'signature',
   'header',
   'body',
+  'format',
+  'signatures',
+  'confusion',
   'vulnerability',
   'alg_none_variant',
   'version'
 ];
+
+const SUPPORTED_FORMATS = ['compact', 'flattened', 'general'];
 
 export function isPlainObject(value) {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -126,6 +131,44 @@ function normalizeSignature(requestData, structured) {
   throw new Error('signature must be false, a string, or omitted');
 }
 
+function normalizeFormat(format = 'compact') {
+  if (!SUPPORTED_FORMATS.includes(format)) {
+    throw new Error(`format must be one of: ${SUPPORTED_FORMATS.join(', ')}`);
+  }
+  return format;
+}
+
+function normalizeSignatures(signatures) {
+  if (signatures === undefined) return undefined;
+  if (!Array.isArray(signatures) || signatures.length === 0) {
+    throw new Error('signatures must be a non-empty array when provided');
+  }
+
+  return signatures.map((signature, index) => {
+    if (!isPlainObject(signature)) {
+      throw new Error(`signatures[${index}] must be an object`);
+    }
+    if (signature.header !== undefined && !isPlainObject(signature.header)) {
+      throw new Error(`signatures[${index}].header must be an object`);
+    }
+    if (signature.unprotected !== undefined && !isPlainObject(signature.unprotected)) {
+      throw new Error(`signatures[${index}].unprotected must be an object`);
+    }
+    if (
+      signature.signature !== undefined &&
+      signature.signature !== false &&
+      typeof signature.signature !== 'string'
+    ) {
+      throw new Error(`signatures[${index}].signature must be false, a string, or omitted`);
+    }
+    return {
+      header: signature.header || {},
+      unprotected: signature.unprotected,
+      signature: signature.signature
+    };
+  });
+}
+
 /**
  * Normalize legacy flat JSON and structured JSON into one internal shape.
  * Structured JSON is auto-detected when header, body, or signature is present.
@@ -164,7 +207,10 @@ export function normalizeTokenRequest(requestData = {}) {
       responseType: getOption(requestData, optionBody, 'response_type', 'token'),
       kty: getOption(requestData, optionBody, 'kty', 'RSA'),
       vulnerability: getOption(requestData, optionBody, 'vulnerability', null),
-      algNoneVariant: getOption(requestData, optionBody, 'alg_none_variant', undefined)
+      algNoneVariant: getOption(requestData, optionBody, 'alg_none_variant', undefined),
+      format: normalizeFormat(getOption(requestData, optionBody, 'format', 'compact')),
+      signatures: normalizeSignatures(getOption(requestData, optionBody, 'signatures', undefined)),
+      confusion: getOption(requestData, optionBody, 'confusion', undefined)
     },
     header: normalizeHeader(requestData, structured),
     body: removeUndefinedFields(body),
@@ -222,6 +268,11 @@ export function applyVulnerabilityPreset(normalized, keyData) {
     case 'embedded_jwk':
       if (normalized.header.jwk === undefined) {
         normalized.header.jwk = keyData.publicKey;
+      }
+      return normalized;
+    case 'format_confusion':
+      if (normalized.options.format === 'compact') {
+        normalized.options.format = 'flattened';
       }
       return normalized;
     default:

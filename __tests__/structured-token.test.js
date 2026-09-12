@@ -34,6 +34,33 @@ describe('Structured token request normalization', () => {
     expect(normalized.signature).toBe('literal-signature');
   });
 
+  test('supports compact, flattened, and general JWS output formats', () => {
+    expect(normalizeTokenRequest({ body: { sub: 'user123' } }).options.format).toBe('compact');
+    expect(normalizeTokenRequest({ format: 'flattened', sub: 'user123' }).options.format).toBe('flattened');
+
+    const normalized = normalizeTokenRequest({
+      format: 'general',
+      body: { sub: 'user123' },
+      signatures: [
+        { header: { kid: 'rsa-key-1' } },
+        { header: { kid: 'alternate-key' }, signature: false }
+      ]
+    });
+
+    expect(normalized.options.format).toBe('general');
+    expect(normalized.options.signatures).toEqual([
+      { header: { kid: 'rsa-key-1' }, unprotected: undefined, signature: undefined },
+      { header: { kid: 'alternate-key' }, unprotected: undefined, signature: false }
+    ]);
+    expect(normalized.body).toEqual({ sub: 'user123' });
+  });
+
+  test('rejects invalid JWS output format and signatures', () => {
+    expect(() => normalizeTokenRequest({ format: 'xml' })).toThrow('format must be one of');
+    expect(() => normalizeTokenRequest({ signatures: [] })).toThrow('signatures must be a non-empty array');
+    expect(() => normalizeTokenRequest({ signatures: [{ signature: true }] })).toThrow('signature must be false');
+  });
+
   test('structured body metadata is not treated as JWT claims', () => {
     const normalized = normalizeTokenRequest({
       header: { typ: 'JWT' },
@@ -276,6 +303,29 @@ describe('Structured vulnerability presets', () => {
     applyVulnerabilityPreset(normalized, { publicKey });
 
     expect(normalized.header.jwk).toBe(publicKey);
+  });
+
+  test('format_confusion preset defaults compact requests to flattened', () => {
+    const normalized = normalizeTokenRequest({
+      vulnerability: 'format_confusion',
+      body: { sub: 'admin' }
+    });
+
+    applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } });
+
+    expect(normalized.options.format).toBe('flattened');
+  });
+
+  test('format_confusion preset preserves explicit general format', () => {
+    const normalized = normalizeTokenRequest({
+      vulnerability: 'format_confusion',
+      format: 'general',
+      body: { sub: 'admin' }
+    });
+
+    applyVulnerabilityPreset(normalized, { publicKey: { kid: 'public' } });
+
+    expect(normalized.options.format).toBe('general');
   });
 
   test('kid traversal and jku injection presets set expected headers', () => {

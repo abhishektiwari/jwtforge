@@ -12,7 +12,7 @@ import { handleDiscoveryRequest } from './discovery.js';
 import { parseTokenExchangeRequest } from './tokenexchange.js';
 import { faker } from '@faker-js/faker';
 import { getCompleteGrammar } from './grammar.js';
-import { applyVulnerabilityPreset, buildJwtHeader, normalizeTokenRequest, parseResponseType } from './tokenrequest.js';
+import { applyVulnerabilityPreset, buildJwtHeader, normalizeTokenRequest, parseResponseType, removeUndefinedFields } from './tokenrequest.js';
 import { setGrammarFaker } from './grammar-resolver.js';
 
 // In-memory cache for local development (when KV/Durable Objects are not available)
@@ -153,6 +153,12 @@ export function base64urlEncode(buffer) {
     .replace(/=/g, '');
 }
 
+function base64urlEncodeJson(value) {
+  return base64urlEncode(
+    new TextEncoder().encode(JSON.stringify(value))
+  );
+}
+
 /**
  * Map OIDC scopes to default claims using faker for realistic test data
  */
@@ -212,54 +218,15 @@ export function getDefaultClaimsFromScope(scope) {
  * @param {Object} keyData - The key data for signing
  * @param {Object} headerOverrides - Optional header field overrides
  * @param {boolean|string|undefined} signatureOption - false for unsigned, string for literal signature, undefined to sign normally
+ * @param {Object} options - Output format options
  */
-async function createJWT(claims, keyData, headerOverrides = {}, signatureOption = undefined) {
-  const now = Math.floor(Date.now() / 1000);
-
-  // JWT Header with optional overrides
-  const header = buildJwtHeader(keyData, headerOverrides);
-
-  // JWT Payload with default OIDC/OAuth2 claims
-  const payload = {
-    iss: claims.iss || 'https://jwtforge.example.com',
-    sub: claims.sub || 'user123',
-    aud: claims.aud || 'https://api.example.com',
-    exp: claims.exp || (now + 3600), // 1 hour from now
-    nbf: claims.nbf || now,
-    iat: claims.iat || now,
-    jti: claims.jti || crypto.randomUUID(),
-    ...claims // Include all custom claims
-  };
-
-  // Remove metadata fields that shouldn't be in the token
-  delete payload.kty;
-  delete payload.alg;
-  delete payload.header_alg;
-  delete payload.header_kid;
-  delete payload.sig;
-  delete payload.header;
-  delete payload.body;
-  delete payload.signature;
-  delete payload.vulnerability;
-  delete payload.version;
-
-  // Encode header and payload
-  const encodedHeader = base64urlEncode(
-    new TextEncoder().encode(JSON.stringify(header))
-  );
-  const encodedPayload = base64urlEncode(
-    new TextEncoder().encode(JSON.stringify(payload))
-  );
-
-  const signatureInput = `${encodedHeader}.${encodedPayload}`;
-
-  // If signature is false, return unsigned JWT (for CVE-2020-28042 testing)
+async function createSignature(signatureInput, keyData, signatureOption = undefined) {
   if (signatureOption === false) {
-    return `${signatureInput}.`;
+    return '';
   }
 
   if (typeof signatureOption === 'string') {
-    return `${signatureInput}.${signatureOption}`;
+    return signatureOption;
   }
 
   // Import private key for signing
@@ -300,9 +267,92 @@ async function createJWT(claims, keyData, headerOverrides = {}, signatureOption 
     throw new Error(`Unsupported algorithm: ${keyData.alg}`);
   }
 
-  const signature = base64urlEncode(signatureBuffer);
+  return base64urlEncode(signatureBuffer);
+}
 
-  return `${signatureInput}.${signature}`;
+async function createJWT(claims, keyData, headerOverrides = {}, signatureOption = undefined, options = {}) {
+  const now = Math.floor(Date.now() / 1000);
+  const format = options.format || 'compact';
+
+  // JWT Header with optional overrides
+  const header = buildJwtHeader(keyData, headerOverrides);
+
+  // JWT Payload with default OIDC/OAuth2 claims
+  const payload = {
+    iss: claims.iss || 'https://jwtforge.example.com',
+    sub: claims.sub || 'user123',
+    aud: claims.aud || 'https://api.example.com',
+    exp: claims.exp || (now + 3600), // 1 hour from now
+    nbf: claims.nbf || now,
+    iat: claims.iat || now,
+    jti: claims.jti || crypto.randomUUID(),
+    ...claims // Include all custom claims
+  };
+
+  // Remove metadata fields that shouldn't be in the token
+  delete payload.kty;
+  delete payload.alg;
+  delete payload.header_alg;
+  delete payload.header_kid;
+  delete payload.sig;
+  delete payload.header;
+  delete payload.body;
+  delete payload.signature;
+  delete payload.format;
+  delete payload.signatures;
+  delete payload.confusion;
+  delete payload.vulnerability;
+  delete payload.version;
+
+  // Encode header and payload
+  const encodedHeader = base64urlEncodeJson(header);
+  const encodedPayload = base64urlEncodeJson(payload);
+
+  const signatureInput = `${encodedHeader}.${encodedPayload}`;
+  const signature = await createSignature(signatureInput, keyData, signatureOption);
+
+  if (format === 'compact') {
+    return `${signatureInput}.${signature}`;
+  }
+
+  if (format === 'flattened') {
+    const token = {
+      payload: encodedPayload,
+      protected: encodedHeader,
+      signature
+    };
+    if (options.unprotected) token.header = options.unprotected;
+    if (options.confusion?.payload_hint) token.payload_decoded = options.confusion.payload_hint;
+    return token;
+  }
+
+  if (format === 'general') {
+    const signatures = options.signatures?.length ? options.signatures : [{}];
+    const token = {
+      payload: encodedPayload,
+      signatures: await Promise.all(signatures.map(async (signatureConfig) => {
+        const protectedHeader = buildJwtHeader(keyData, {
+          ...headerOverrides,
+          ...(signatureConfig.header || {})
+        });
+        const protectedSegment = base64urlEncodeJson(protectedHeader);
+        const signatureSegment = await createSignature(
+          `${protectedSegment}.${encodedPayload}`,
+          keyData,
+          signatureConfig.signature ?? signatureOption
+        );
+        return removeUndefinedFields({
+          protected: protectedSegment,
+          header: signatureConfig.unprotected,
+          signature: signatureSegment
+        });
+      }))
+    };
+    if (options.confusion?.payload_hint) token.payload_decoded = options.confusion.payload_hint;
+    return token;
+  }
+
+  throw new Error(`Unsupported token format: ${format}`);
 }
 
 /**
@@ -538,7 +588,8 @@ async function handleTokenRequest(request, env) {
       token_type: 'Bearer',
       expires_in: normalized.body.exp ? (normalized.body.exp - Math.floor(Date.now() / 1000)) : 3600,
       algorithm: keyData.alg,
-      key_id: keyData.kid
+      key_id: keyData.kid,
+      format: normalized.options.format
     };
 
     // Get default claims based on requested scopes (only for 'fake' mode)
@@ -580,7 +631,11 @@ async function handleTokenRequest(request, env) {
         accessTokenClaims = applyModeTransformations(accessTokenClaims, mode, exclude);
       }
 
-      const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, normalized.signature);
+      const accessToken = await createJWT(accessTokenClaims, keyData, headerOverrides, normalized.signature, {
+        format: normalized.options.format,
+        signatures: normalized.options.signatures,
+        confusion: normalized.options.confusion
+      });
       response.access_token = accessToken;
     }
 
@@ -609,7 +664,11 @@ async function handleTokenRequest(request, env) {
         idTokenClaims = applyModeTransformations(idTokenClaims, mode, exclude);
       }
 
-      const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, normalized.signature);
+      const idToken = await createJWT(idTokenClaims, keyData, headerOverrides, normalized.signature, {
+        format: normalized.options.format,
+        signatures: normalized.options.signatures,
+        confusion: normalized.options.confusion
+      });
       response.id_token = idToken;
     }
 
