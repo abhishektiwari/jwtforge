@@ -77,6 +77,8 @@ OIDC infrastructure & $\checkmark$ & $\times$ & $\times$ & $\times$ & $\times$ &
 \hline
 CI/CD integration & $\checkmark$ & Limited & $\times$ & $\times$ & $\checkmark$ & Limited \\
 \hline
+OpenAPI JWT pentest generator & $\checkmark$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
+\hline
 Signature tampering & Partial & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\times$ & $\checkmark$ \\
 \hline
 Brute-force cracking & $\times$ & $\checkmark$ & $\times$ & $\times$ & $\checkmark$ & $\times$ \\
@@ -125,6 +127,8 @@ Across these approaches, JWTForge can produce either compact JWTs or JWS JSON Se
 ## Workflow Scenarios
 
 JWTForge supports two operational patterns (Figure \ref{fig:cicd}, Figure \ref{fig:researcher}). In CI/CD, a commit triggers local API and JWTForge deployment; Postman/Newman runs compliant, fuzz, malicious, and format-confusion tests, gating promotion to beta, gamma, and production. In security research, JWTForge generates adversarial tokens across all four modes and multiple JOSE serializations to probe algorithm confusion, format confusion, injection, and authorization bypass; researchers analyze target-API responses to produce reproducible, responsibly disclosed findings.
+
+Its OpenAPI JWT pentest generator discovers protected endpoints from API specifications, derives authentication and authorization test plans, and programmatically runs JWT vulnerability probes against each operation to validate issuer, audience, scope, role, signature, key, and format-confusion handling in target services.
 
 ![CI/CD integration: commits trigger local API and JWTForge deployment, automated security testing, and promotion on success. \label{fig:cicd}](./images/jwtforge-cicd-workflow.pdf){width=100%}
 
