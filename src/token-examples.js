@@ -226,6 +226,34 @@ export const tokenExamples = {
       }
     }
   },
+  mutation: {
+    endpoint: '/mutation',
+    group: 'Token mutations',
+    summary: 'Generate a source and three independent variants',
+    value: {
+      source: { mode: 'fake', body: { sub: 'user123', roles: ['user'], scope: 'read write' } },
+      mutations: [
+        { id: 'missing-signature', operations: [{ type: 'signature', operation: 'remove' }] },
+        { id: 'alg-none', operations: [
+          { type: 'header', operation: 'set', field: 'alg', value: 'None' },
+          { type: 'signature', operation: 'remove' },
+        ] },
+        { id: 'flattened', operations: [{ type: 'format', operation: 'convert', format: 'flattened' }] },
+      ],
+    },
+  },
+  mutateImportedToken: {
+    endpoint: '/mutation',
+    group: 'Token mutations',
+    summary: 'Mutate an imported token (unverified sample)',
+    value: {
+      token: 'eyJhbGciOiJSUzI1NiJ9.eyJzdWIiOiJ1c2VyMTIzIn0.AQID',
+      mutations: [
+        { id: 'claim-edit', operations: [{ type: 'body', operation: 'set', field: 'roles', value: ['admin'] }] },
+        { id: 'signature-bit', operations: [{ type: 'signature', operation: 'flip_bit', byte_index: 0, bit_index: 0 }] },
+      ],
+    },
+  },
   malicious: {
     group: 'Testing modes',
     summary: 'Malicious mode with SQL injection',
@@ -413,7 +441,7 @@ export const tokenExamples = {
 };
 
 export const openApiTokenExamples = Object.fromEntries(
-  Object.entries(tokenExamples).map(([key, example]) => [
+  Object.entries(tokenExamples).filter(([, example]) => example.endpoint !== '/mutation').map(([key, example]) => [
     key,
     {
       summary: `${example.group}: ${example.summary}`,
@@ -422,8 +450,15 @@ export const openApiTokenExamples = Object.fromEntries(
   ])
 );
 
+export const openApiMutationExamples = Object.fromEntries(
+  Object.entries(tokenExamples).filter(([, example]) => example.endpoint === '/mutation').map(([key, example]) => [
+    key, { summary: example.summary, value: example.value },
+  ])
+);
+
 export const tokenExampleOptions = Object.entries(tokenExamples).map(([key, example]) => ({
   key,
+  endpoint: example.endpoint || '/token',
   group: example.group,
   label: example.summary,
   value: example.value

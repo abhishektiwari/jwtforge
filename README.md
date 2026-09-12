@@ -22,7 +22,8 @@ A lightweight JWT token vending service for testing purposes, deployable on Clou
 - Generates compact JWTs, JWS Flattened JSON Serialization, and JWS General JSON Serialization for parser boundary testing.
 - Keeps backward compatibility with the legacy flat claim model.
 - Provides `fake`, `fuzz`, `malicious`, and `grammar` testing modes.
-- Supports known JWT attack presets such as `alg_none`, RS/HS confusion, `kid` traversal, `jku` injection, embedded JWK, and format confusion.
+- Derives token variants from imported or generated sources through the separate [mutation endpoint](https://jwtforge.dev/docs/mutation/), with one result per explicit operation group and no automatic re-signing.
+- Supports known JWT attack presets such as `alg_none`, RS/HS confusion, `kid` traversal, `jku` injection, embedded JWK, and [format confusion](https://jwtforge.dev/docs/attacks/format-confusion/).
 - Provides OIDC discovery, JWKS, token introspection, OAuth2 client credentials, and RFC 8693 token exchange.
 - Includes an OpenAPI Pen Test Generator that generates and directly runs authentication, authorization, and JWT vulnerability tests from OpenAPI specifications.
 - Runs locally, in CI/CD, or on Cloudflare Workers.
@@ -57,11 +58,19 @@ Generate a security testing token:
 jwtforge token '{"vulnerability":"alg_none","alg_none_variant":"nOne","body":{"sub":"admin"}}'
 ```
 
-Generate a format-confusion token:
+Generate a [format-confusion token](https://jwtforge.dev/docs/attacks/format-confusion/):
 
 ```bash
 jwtforge token '{"vulnerability":"format_confusion","body":{"sub":"user123","scope":"read write"}}'
 ```
+
+Generate a token variant using the separate [mutation endpoint](https://jwtforge.dev/docs/mutation/):
+
+```bash
+jwtforge mutation '{"source":{"body":{"sub":"user123"}},"mutations":[{"id":"unsigned","operations":[{"type":"signature","operation":"remove"}]}]}'
+```
+
+Provide `token` instead of `source` to mutate an existing token. Each group produces one entry in `results[]`; mutation is not a `/token` mode.
 
 Stop the local server:
 
@@ -99,6 +108,8 @@ Local URLs:
 | --- | --- |
 | Worker static docs and API | `http://localhost:8787` |
 | Token API | `http://localhost:8787/token` |
+| Mutation API | `http://localhost:8787/mutation` |
+| Introspection API | `http://localhost:8787/introspect` |
 | Swagger UI | `http://localhost:8787/swagger` |
 | OpenAPI JSON | `http://localhost:8787/openapi.json` |
 | Docusaurus dev server | `http://localhost:3000` |
@@ -111,6 +122,8 @@ Hosted URLs:
 | --- | --- |
 | Documentation site | `https://jwtforge.dev` |
 | Token API | `https://jwtforge.dev/token` |
+| Mutation API | `https://jwtforge.dev/mutation` |
+| Introspection API | `https://jwtforge.dev/introspect` |
 | Swagger UI | `https://jwtforge.dev/swagger` |
 | OpenAPI JSON | `https://jwtforge.dev/openapi.json` |
 | OIDC issuer | `https://jwtforge.dev` |
@@ -172,6 +185,8 @@ Important pages:
 | [CLI](https://jwtforge.dev/docs/cli/) | CLI installation, token generation, local server workflow, CI/CD, Postman, and GitHub Actions examples |
 | [Evaluation](https://jwtforge.dev/docs/evaluation/) | Performance benchmark and representative OAuth2/OIDC testing scenarios |
 | [Security testing modes](https://jwtforge.dev/docs/modes/overview/) | `fake`, `fuzz`, `malicious`, and `grammar` mode behavior and options |
+| [Mutation endpoint](https://jwtforge.dev/docs/mutation/) | Independent token variants from explicit operation groups, imported or generated sources, signature preservation, and batch limits |
+| [Token introspection](https://jwtforge.dev/docs/introspection/) | Form-encoded requests, Basic authentication, active/inactive responses, and validation limits |
 | [OpenAPI Pen Test Generator](https://jwtforge.dev/docs/openapi-pen-test-generator/) | Generate or directly run authentication, authorization, and JWT vulnerability tests from an OpenAPI specification |
 | [OpenAPI and Swagger](https://jwtforge.dev/docs/reference/openapi/) | OpenAPI contract, Swagger UI usage, local URLs, and production configuration |
 | [Swagger UI](https://jwtforge.dev/api-reference/) | Interactive API reference served from the deployed docs site |
@@ -183,6 +198,7 @@ Token endpoint documentation:
 | [Structured JSON](https://jwtforge.dev/docs/token-endpoint/structured-json/) | Recommended `{header, body, signature}` request shape, examples, field placement, modes, and vulnerability presets |
 | [Legacy flat JSON](https://jwtforge.dev/docs/token-endpoint/legacy-flat-json/) | Backward-compatible claim-at-top-level request style and migration guidance |
 | [Signatures](https://jwtforge.dev/docs/token-endpoint/signatures/) | Signed tokens, unsigned test tokens, literal signature segments, and signature-related testing behavior |
+| [Token exchange](https://jwtforge.dev/docs/token-endpoint/token-exchange/) | Exchange compact JWTs, add/remove claims, override audiences, and inspect newly signed tokens |
 | [Header fields](https://jwtforge.dev/docs/reference/header-fields/) | Supported JWT header fields, rejected certificate-chain fields, defaults, examples, and security notes |
 | [OIDC/OAuth2 claims](https://jwtforge.dev/docs/reference/oidc-oauth2-claims/) | Supported standard claims, custom claims, defaults, examples, and claim metadata rules |
 | [OIDC scopes](https://jwtforge.dev/docs/reference/oidc-scopes/) | Scope-driven claim population for `openid`, `profile`, `email`, `address`, and `phone` |

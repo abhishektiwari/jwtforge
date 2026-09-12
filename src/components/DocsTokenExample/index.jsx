@@ -46,7 +46,8 @@ function decodeJwtPart(value) {
     const remainder = base64.length % 4;
     if (remainder === 2) base64 += '==';
     if (remainder === 3) base64 += '=';
-    return JSON.parse(atob(base64));
+    const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   } catch {
     return null;
   }
@@ -70,7 +71,9 @@ function decodeJoseToken(token) {
     const signatures = Array.isArray(token.signatures) ? token.signatures : [token];
     const firstSignature = signatures[0] || {};
     return {
-      header: decodeJwtPart(firstSignature.protected),
+      header: Array.isArray(token.signatures)
+        ? signatures.map((entry, index) => ({ signature_index: index, protected: decodeJwtPart(entry.protected), unprotected: entry.header || null }))
+        : decodeJwtPart(firstSignature.protected),
       body: decodeJwtPart(token.payload),
       signature: Array.isArray(token.signatures)
         ? signatures.map((entry, index) => ({
@@ -85,18 +88,19 @@ function decodeJoseToken(token) {
   return { header: null, body: null, signature: '' };
 }
 
-export default function DocsTokenExample({ request }) {
+export default function DocsTokenExample({ request, endpoint: endpointPath = '/token' }) {
   const { siteConfig } = useDocusaurusContext();
   const configuredApiBaseUrl = siteConfig.customFields?.jwtforgeApiBaseUrl;
   const baseUrl = useMemo(
     () => getApiBaseUrl(configuredApiBaseUrl),
     [configuredApiBaseUrl]
   );
-  const endpoint = `${baseUrl.replace(/\/$/, '')}/token`;
+  const endpoint = `${baseUrl.replace(/\/$/, '')}${endpointPath}`;
   const [response, setResponse] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const token = response?.access_token || response?.id_token || '';
+  const [selectedResult, setSelectedResult] = useState(0);
+  const token = response?.results?.[selectedResult]?.token ?? response?.access_token ?? response?.id_token ?? '';
   const curl = `curl -X POST ${endpoint} \\
   -H "Content-Type: application/json" \\
   -d '${prettyJson(request)}'`;
@@ -113,6 +117,7 @@ export default function DocsTokenExample({ request }) {
     setLoading(true);
     setError('');
     setResponse(null);
+    setSelectedResult(0);
 
     try {
       const result = await fetch(endpoint, {
@@ -139,10 +144,10 @@ export default function DocsTokenExample({ request }) {
   return (
     <div className={styles.example}>
       <div className={styles.header}>
-        <span>POST <code>/token</code></span>
+        <span>POST <code>{endpointPath}</code></span>
         <div className={styles.actions}>
           <button className={styles.button} onClick={generateToken} disabled={loading}>
-            {loading ? 'Generating...' : 'Generate token'}
+            {loading ? 'Generating...' : endpointPath === '/mutation' ? 'Generate mutations' : 'Generate token'}
           </button>
           <button className={styles.secondaryButton} onClick={copyCurl}>
             Copy curl
@@ -161,6 +166,14 @@ export default function DocsTokenExample({ request }) {
       </div>
       <div className={styles.decodedPanel}>
         <div className={styles.panelHeader}>Decoded token</div>
+        {response?.results && (
+          <label className={styles.resultSelector}>
+            <span>Mutation result</span>
+            <select value={selectedResult} onChange={event => setSelectedResult(Number(event.target.value))}>
+              {response.results.map((result, index) => <option key={result.id} value={index}>{result.id}</option>)}
+            </select>
+          </label>
+        )}
         <JsonOutput value={decodedOutput} emptyText="No token yet" />
       </div>
       {error && <div className={styles.error}>{error}</div>}

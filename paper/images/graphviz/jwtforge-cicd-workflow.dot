@@ -12,7 +12,10 @@ digraph cicd_workflow {
     openapi [label="Load OpenAPI Spec\n(Discover Protected Endpoints)", shape=box, fillcolor="#E8F4F8"]
     pentest [label="Generate JWT Pentest Plan\n(authn/authz/vulnerability probes)", shape=box, fillcolor="#FFF4E6"]
     postman [label="Run End-to-End and Pentest Suites\n(Postman/Newman or Custom Runner)", shape=box, fillcolor="#E8F5E9"]
-    security_test [label="Execute Security Scenarios\n(compliance/fuzz/malicious/grammar/format confusion)", shape=box, fillcolor="#FFF4E6"]
+    baseline [label="Assert Baseline Token Acceptance\n(Protected Target Endpoint)", shape=box, fillcolor="#E8F5E9"]
+    mutation [label="Custom Mutation Cases: POST /mutation\nImported or Generated Source\nOne Variant per Operation Group", shape=box, fillcolor="#FFF4E6"]
+    security_test [label="Execute Security Scenarios\nGeneration Probes + Optional Mutation Batches\n(signature tampering / format confusion / claims)", shape=box, fillcolor="#FFF4E6"]
+    compare [label="Assert Expected Target Decisions\n(Baseline vs. Variants)", shape=box, fillcolor="#E8F5E9"]
     decision [label="All Tests\nPass?", shape=diamond, fillcolor="#FFF9C4"]
     fail [label="Fail - Notify\nDeveloper", shape=box, fillcolor="#FFEBEE", style="filled,rounded"]
     deploy_beta [label="Deploy to\nBeta/Gamma/Prod", shape=box, fillcolor="#E8F5F5", style="filled,rounded"]
@@ -29,8 +32,12 @@ digraph cicd_workflow {
     jwtforge -> pentest
     pentest -> postman
     deploy_local -> postman
-    postman -> security_test
-    security_test -> decision
+    postman -> baseline
+    baseline -> security_test [label="generation probes"]
+    baseline -> mutation [style=dashed, label="optional custom cases"]
+    mutation -> security_test [label="runner iterates results"]
+    security_test -> compare
+    compare -> decision
     decision -> fail [label="No"]
     decision -> deploy_beta [label="Yes"]
 }

@@ -87,7 +87,8 @@ function decodeJwtPart(value) {
     const remainder = base64.length % 4;
     if (remainder === 2) base64 += '==';
     if (remainder === 3) base64 += '=';
-    return JSON.parse(atob(base64));
+    const bytes = Uint8Array.from(atob(base64), character => character.charCodeAt(0));
+    return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
   } catch {
     return null;
   }
@@ -111,7 +112,9 @@ function decodeJoseToken(token) {
     const signatures = Array.isArray(token.signatures) ? token.signatures : [token];
     const firstSignature = signatures[0] || {};
     return {
-      header: decodeJwtPart(firstSignature.protected),
+      header: Array.isArray(token.signatures)
+        ? signatures.map((entry, index) => ({ signature_index: index, protected: decodeJwtPart(entry.protected), unprotected: entry.header || null }))
+        : decodeJwtPart(firstSignature.protected),
       body: decodeJwtPart(token.payload),
       signature: Array.isArray(token.signatures)
         ? signatures.map((entry, index) => ({
@@ -136,15 +139,17 @@ export default function TryTokenWidget() {
   const [response, setResponse] = useState(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [selectedResult, setSelectedResult] = useState(0);
 
   const parsedRequest = useMemo(() => safeJsonParse(requestJson), [requestJson]);
-  const token = response?.access_token || response?.id_token || '';
+  const token = response?.results?.[selectedResult]?.token ?? response?.access_token ?? response?.id_token ?? '';
   const decoded = useMemo(() => decodeJoseToken(token), [token]);
   const baseUrl = useMemo(
     () => getApiBaseUrl(configuredApiBaseUrl),
     [configuredApiBaseUrl]
   );
-  const endpoint = `${baseUrl.replace(/\/$/, '')}/token`;
+  const endpointPath = tokenExampleOptions.find(example => example.key === selectedExample)?.endpoint || '/token';
+  const endpoint = `${baseUrl.replace(/\/$/, '')}${endpointPath}`;
   const curl = `curl -X POST ${endpoint} \\
   -H "Content-Type: application/json" \\
   -d '${parsedRequest ? prettyJson(parsedRequest) : requestJson}'`;
@@ -154,6 +159,7 @@ export default function TryTokenWidget() {
     setSelectedExample(example.key);
     setRequestJson(prettyJson(example.value));
     setResponse(null);
+    setSelectedResult(0);
     setError('');
   }
 
@@ -161,6 +167,7 @@ export default function TryTokenWidget() {
     setLoading(true);
     setError('');
     setResponse(null);
+    setSelectedResult(0);
 
     if (!parsedRequest) {
       setLoading(false);
@@ -215,8 +222,9 @@ export default function TryTokenWidget() {
       </div>
 
       <div className={styles.actions}>
+        <span>POST <code>{endpointPath}</code></span>
         <button className={styles.primaryButton} onClick={generateToken} disabled={loading}>
-          {loading ? 'Generating...' : 'Generate token'}
+          {loading ? 'Generating...' : endpointPath === '/mutation' ? 'Generate mutations' : 'Generate token'}
         </button>
         <button className={styles.secondaryButton} onClick={copyCurl}>Copy curl</button>
       </div>
@@ -228,6 +236,14 @@ export default function TryTokenWidget() {
           <div className={styles.panelHeader}>Response</div>
           <JsonOutput value={response} emptyText="No response yet" />
         </div>
+        {response?.results && (
+          <label className={styles.resultSelector}>
+            <span>Mutation result</span>
+            <select value={selectedResult} onChange={event => setSelectedResult(Number(event.target.value))}>
+              {response.results.map((result, index) => <option key={result.id} value={index}>{result.id}</option>)}
+            </select>
+          </label>
+        )}
         <div className={styles.panel}>
           <div className={styles.panelHeader}>Decoded Header</div>
           <JsonOutput value={decoded.header} emptyText="No token yet" />

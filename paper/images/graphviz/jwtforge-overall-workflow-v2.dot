@@ -1,7 +1,8 @@
 digraph jwtforge_generation {
     fontname="Helvetica,Arial,sans-serif"
-    node [fontname="Helvetica,Arial,sans-serif", style=filled]
-    edge [fontname="Helvetica,Arial,sans-serif"]
+    graph [ranksep=0.3, nodesep=0.22, margin=0.03]
+    node [fontname="Helvetica,Arial,sans-serif", fontsize=10, margin="0.08,0.05", style=filled]
+    edge [fontname="Helvetica,Arial,sans-serif", fontsize=9]
     rankdir=TB;
 
     json_input [label="JSON Payload\nRequest", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
@@ -19,7 +20,13 @@ digraph jwtforge_generation {
     keystore_exchange [label="Key Retrieval\n(RSA from storage)", shape=box, fillcolor="#FCE4EC"]
 
     sign [label="JWT Signing\n(Web Crypto API)", shape=box, fillcolor="#E8F5E9"]
-    output [label="HTTP Response\nSigned JWT + Metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
+    format [label="Serialize Token\ncompact / flattened / general", shape=box, fillcolor="#E8F5E9"]
+    exchange_sign [label="RS256 Signing\nDefault claims; compact only\nNo generation-mode transforms", shape=box, fillcolor="#E8F5E9"]
+    output [label="/token Response\nToken + Metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
+    mutation_input [label="POST /mutation\nImported token OR source request", shape=box, fillcolor="#E8F4F8", style="filled,rounded"]
+    mutation_source [label="Resolve One Source\nImport unchanged OR generate\nvia token-generation pipeline", shape=box, fillcolor="#FFF4E6"]
+    mutate [label="Independent Operation Groups\nHeader / claim / signature / format\nNo automatic re-signing", shape=box, fillcolor="#E8F5E9"]
+    variants [label="Batch Response\nOne variant per group\n+ change metadata", shape=box, fillcolor="#F3E5F5", style="filled,rounded"]
 
     json_input -> parse
     oauth_input -> parse
@@ -37,7 +44,12 @@ digraph jwtforge_generation {
     header_fuzz -> sign [label="header overrides"]
     mode_apply -> sign [label="access_token"]
     mode_apply -> sign [style=dashed, label="id_token\n(independent re-run,\nresponse_type=\nid_token token)"]
-    keystore_exchange -> sign [label="access_token\n(no mode/header\noverrides)"]
+    keystore_exchange -> exchange_sign
+    exchange_sign -> output
 
-    sign -> output
+    sign -> format
+    format -> output
+    mutation_input -> mutation_source
+    mutation_source -> mutate
+    mutate -> variants
 }

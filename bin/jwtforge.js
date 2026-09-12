@@ -69,6 +69,7 @@ jwtforge - JWT Token Vending Service for Testing
 Usage:
   jwtforge start                      Start the development server
   jwtforge token [payload] [options]  Generate a JWT token
+  jwtforge mutation <payload> [options] Generate token mutations
   jwtforge pentest <command> [options] Generate or run OpenAPI JWT pen tests
   jwtforge status [options]           Check if server is running
   jwtforge stop [options]             Stop the running server
@@ -111,7 +112,7 @@ async function run(cmd) {
   });
 }
 
-async function generateToken(payload, port = null) {
+async function generateToken(payload, port = null, endpoint = '/token') {
   const https = require('https');
   const http = require('http');
 
@@ -147,7 +148,7 @@ async function generateToken(payload, port = null) {
     const requestOptions = {
       hostname: host,
       port: port,
-      path: '/token',
+      path: endpoint,
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -324,10 +325,10 @@ async function main() {
       console.error('Error:', error.message);
       process.exit(1);
     }
-  } else if (command === 'token') {
+  } else if (command === 'token' || command === 'mutation') {
     try {
       const payload = process.argv[3];
-      const token = await generateToken(payload);
+      const token = await generateToken(payload, null, command === 'mutation' ? '/mutation' : '/token');
       console.log(JSON.stringify(token, null, 2));
     } catch (error) {
       console.error('Error:', error.message);

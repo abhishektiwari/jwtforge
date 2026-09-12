@@ -18,6 +18,7 @@ tags:
   - penetration testing
   - fuzzing
   - token generation
+  - token mutation
   - token exchange
   - token introspection
   - algorithm confusion
@@ -30,7 +31,7 @@ tags:
 
 # Summary
 
-JWTForge is an open-source HTTP service that programmatically generates cryptographically signed JSON Web Tokens (JWT) for security testing, fuzzing, and integration testing of OAuth2 and OpenID Connect (OIDC) implementations. It can be run locally or deployed to Cloudflare Workers. JWTForge returns signed tokens transformed by one of four testing modes: *compliant* (Faker-generated realistic OIDC tokens), *fuzz* (Big List of Naughty Strings and boundary values), *malicious* (injection payloads), and *grammar* (categorical RFC-derived patterns). It supports three generation approaches — JSON payload, OAuth2 client_credentials [@rfc6749], and RFC 8693 token exchange [@rfc8693] — and exposes OIDC infrastructure endpoints (RFC 7662 introspection [@rfc7662], JWKS [@rfc7517], discovery [@openid_connect_discovery]). JWTForge also generates compact JWTs, flattened JWS JSON Serialization, and general JWS JSON Serialization for testing parser format-confusion defects. By addressing token *generation* rather than *manipulation*, JWTForge enables reproducible token corpora for CI/CD integration testing, robustness evaluation, and vulnerability research.
+JWTForge is an open-source HTTP service that programmatically generates cryptographically signed JSON Web Tokens (JWT) for security testing, fuzzing, and integration testing of OAuth2 and OpenID Connect (OIDC) implementations. It can be run locally or deployed to Cloudflare Workers. JWTForge returns signed tokens transformed by one of four testing modes: *compliant* (Faker-generated realistic OIDC tokens), *fuzz* (Big List of Naughty Strings and boundary values), *malicious* (injection payloads), and *grammar* (categorical RFC-derived patterns). It supports three generation approaches — JSON payload, OAuth2 client_credentials [@rfc6749], and RFC 8693 token exchange [@rfc8693] — and exposes OIDC infrastructure endpoints (RFC 7662 introspection [@rfc7662], JWKS [@rfc7517], discovery [@openid_connect_discovery]). JWTForge also generates compact JWTs, flattened JWS JSON Serialization, and general JWS JSON Serialization for testing parser format-confusion defects. A separate mutation endpoint derives header, claim, signature, and format variants from imported or generated tokens, complementing generation for CI/CD integration testing, robustness evaluation, and vulnerability research.
 
 # Statement of need
 
@@ -46,7 +47,7 @@ The target audience is broad: security engineers running fuzzing campaigns; pene
 
 The JWT security tooling ecosystem comprises tools focused on exploitation, interactive editing, brute-force secret recovery, and library-level differential testing. **jwt_tool** [@jwt_tool] performs algorithm confusion attacks, brute-force HMAC recovery, and claim tampering, but requires an existing JWT as input. **JWT Editor** [@jwt_editor] and **JOSEPH** [@joseph] are Burp Suite extensions enabling interactive JWT modification within intercepted traffic; both require proxy-based interception and human interaction, precluding CI/CD integration. **JWT Cracker** [@jwt_cracker] focuses on HMAC-SHA256 secret brute-forcing. **JWTeemo** [@jwteemo], the artifact associated with Token Time Bomb [@yang2026token], targets systematic JWT library testing across signed JWS and encrypted JWE handling and includes format-confusion classes, building on attack categories publicly described by Tervoort [@tervoort2023three]. Its focus is library behavior rather than OAuth2/OIDC application workflows. Cryptographic libraries such as **Nimbus JOSE+JWT** [@nimbus] support programmatic construction but require application-level code to assemble testing scenarios.
 
-JWTForge occupies a distinct position: an HTTP service exposing token-generation and testing modes as API parameters. It complements exploitation tools and library fuzzers by generating reproducible corpora and endpoint-ready test traffic for OAuth2/OIDC applications. Table \ref{tab:comparison} summarises tool capabilities.
+JWTForge occupies a distinct position: an HTTP service exposing token generation, explicit mutation operations, and testing modes as API parameters. It complements exploitation tools and library fuzzers by generating reproducible corpora and endpoint-ready test traffic for OAuth2/OIDC applications. Table \ref{tab:comparison} summarises tool capabilities.
 
 \begin{table}[ht]
 \centering
@@ -79,7 +80,7 @@ CI/CD integration & $\checkmark$ & Limited & $\times$ & $\times$ & $\checkmark$ 
 \hline
 OpenAPI JWT pentest generator & $\checkmark$ & $\times$ & $\times$ & $\times$ & $\times$ & $\times$ \\
 \hline
-Signature tampering & Partial & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\times$ & $\checkmark$ \\
+Signature tampering & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\checkmark$ & $\times$ & $\checkmark$ \\
 \hline
 Brute-force cracking & $\times$ & $\checkmark$ & $\times$ & $\times$ & $\checkmark$ & $\times$ \\
 \hline
@@ -87,13 +88,13 @@ Serverless deployment & $\checkmark$ & $\times$ & $\times$ & $\times$ & $\times$
 \hline
 \end{tabular}
 \vspace{0.5cm}
-\caption{Comparative capabilities of JWT security tools. JWTForge occupies a distinct position within the JWT security ecosystem, addressing token \textit{generation} rather than token \textit{manipulation}. Checkmarks ($\checkmark$) indicate full support, crosses ($\times$) indicate no support, and ``Partial'' or ``Limited'' indicate restricted or partial functionality.}
+\caption{Comparative capabilities of JWT security tools. JWTForge combines token generation and mutation with OAuth2/OIDC application testing. Checkmarks ($\checkmark$) indicate support, not identical operator coverage; crosses ($\times$) indicate no support, and ``Partial'' or ``Limited'' indicate restricted functionality. JWTForge's signature tampering covers JWS signature removal, replacement, truncation, and bit flips.}
 \label{tab:comparison}
 \end{table}
 
 # Software design
 
-JWTForge is a JavaScript HTTP API for token generation and OIDC infrastructure, installable via `npm` or deployable to Cloudflare Workers. Its modules separate request parsing, claim transformation, key management, and response formatting.
+JWTForge is a JavaScript HTTP API for token generation, mutation, and OIDC infrastructure, installable via `npm` or deployable to Cloudflare Workers. Its modules separate request parsing, claim transformation, mutation operations, key management, and response formatting.
 
 ## Token Generation Workflow
 
@@ -110,11 +111,11 @@ Token generation proceeds through five stages.
 5. **Signing and Response:** Modified claims are assembled with the JWT header and signed using the Web Crypto API [@w3c_webcrypto]. Compact JWT output is the default, while callers can request flattened JWS JSON Serialization or general JWS JSON Serialization via the `format` parameter. For hybrid flows (`response_type=id_token token`), access and ID tokens are generated independently.
 
 
-![JWTForge token generation workflow. Three approaches (JSON payload, OAuth2 client credentials, RFC 8693 token exchange) converge to a common signing workflow. Solid arrows indicate primary flow; dashed arrows indicate conditional paths. \label{fig:workflow}](./images/jwtforge-overall-workflow.pdf){width=100%}
+![JWTForge generation and mutation workflows. Token exchange bypasses generation-mode transforms and issues compact RS256 tokens. Mutation independently transforms an imported or generated source without automatic re-signing. Dashed arrows indicate conditional paths. \label{fig:workflow}](./images/jwtforge-overall-workflow.pdf){width=100%}
 
-## Token Generation Approaches
+## Token Generation and Mutation Approaches
 
-JWTForge supports three operationally distinct generation approaches:
+JWTForge supports three generation approaches and a separate mutation endpoint:
 
 1. **Direct JSON Payload:** Clients submit claims as a JSON object, providing maximum flexibility for unit testing, integration testing, and adversarial payload injection. Custom claims, OIDC scopes, and modes are all supported.
 
@@ -122,7 +123,9 @@ JWTForge supports three operationally distinct generation approaches:
 
 3. **Token Exchange (RFC 8693):** Clients submit a subject token (JWT, ID token, or access token) with optional `add_claims`/`remove_claims` modifications, enabling testing of exchange scenarios, delegation flows, and claim transformation without access to the original issuer. The introspection endpoint validates exchanged tokens, completing the lifecycle.
 
-Across these approaches, JWTForge can produce either compact JWTs or JWS JSON Serialization outputs. The latter enables format-confusion testing: a vulnerable JWT implementation misidentifies the JWT serialization format, allowing an attacker to transform an otherwise legitimate compact-format JWT into a JSON-format JWS, insert forged payload material, and potentially achieve arbitrary token forgery. This corresponds to the polyglot-token class in prior JWT research [@tervoort2023three].
+4. **Token Mutation:** `POST /mutation` applies explicit operation groups to imported or generated tokens, returning one independent variant per group without automatic re-signing. Operations edit headers and claims, remove/replace/truncate signatures, flip signature bits, or convert JWS formats without information loss. General JWS supports per-signature targeting; JWE is unsupported.
+
+JSON token-generation requests can produce compact JWTs or JWS JSON Serialization outputs; token exchange issues compact RS256 tokens. JSON serialization enables format-confusion testing: a vulnerable JWT implementation misidentifies the JWT serialization format, allowing an attacker to transform an otherwise legitimate compact-format JWT into a JSON-format JWS, insert forged payload material, and potentially achieve arbitrary token forgery. This corresponds to the polyglot-token class in prior JWT research [@tervoort2023three].
 
 ## Workflow Scenarios
 
@@ -130,9 +133,9 @@ JWTForge supports two operational patterns (Figure \ref{fig:cicd}, Figure \ref{f
 
 Its OpenAPI JWT pentest generator discovers protected endpoints from API specifications, derives authentication and authorization test plans, and programmatically runs JWT vulnerability probes against each operation to validate issuer, audience, scope, role, signature, key, and format-confusion handling in target services.
 
-![CI/CD integration: commits trigger local API and JWTForge deployment, automated security testing, and promotion on success. \label{fig:cicd}](./images/jwtforge-cicd-workflow.pdf){width=100%}
+![CI/CD integration: generation probes and optional custom mutation batches test target decisions against a baseline before promotion. \label{fig:cicd}](./images/jwtforge-cicd-workflow.pdf){width=100%}
 
-![Researcher workflow: adversarial payload testing against target APIs via local or remote JWTForge. \label{fig:researcher}](./images/jwtforge-researcher-workflow.pdf){width=100%}
+![Researcher workflow: generate adversarial tokens or mutate captured/generated sources, then replay baseline and variant tokens against target APIs. \label{fig:researcher}](./images/jwtforge-researcher-workflow.pdf){width=100%}
 
 # Research impact
 
@@ -142,7 +145,7 @@ JWTForge enables several lines of research on authentication, authorization, and
 
 **Security evaluation and vulnerability discovery.** Researchers studying JWT performance and validation defects often construct ad hoc corpora [@rahmatulloh2019performance; @yang2026token; @nugraha2023performance]. JWTForge supplies reproducible realistic, stochastic, adversarial, and categorical token sets. Its malicious mode, grammar mode, and header transformations operationalise key confusion [@xu2023jwtkey], injection, format-confusion, and claim-handling tests as API parameters.
 
-**Black-box measurement studies.** Large-scale automated measurement of authentication implementations [@costa2026automated] requires combining token mutation with original request context replay. JWTForge's RFC 8693 token exchange [@rfc8693] supports this directly: a captured token can be exchanged into a mutated variant while preserving the surrounding request context.
+**Black-box measurement studies.** Large-scale automated measurement of authentication implementations [@costa2026automated] requires combining token mutation with original request context replay. JWTForge's mutation endpoint derives variants from captured tokens without re-signing. An external test harness replays these variants in the original request context and compares target responses with the baseline.
 
 # Availability
 

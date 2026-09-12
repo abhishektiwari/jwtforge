@@ -2,7 +2,46 @@
  * OpenAPI Specification and Swagger UI for JWTForge
  */
 
-import { openApiTokenExamples } from './token-examples.js';
+import { openApiTokenExamples, openApiMutationExamples } from './token-examples.js';
+
+const signatureIndex = { type: 'integer', minimum: 0, maximum: 7, description: 'Required for header/signature operations when the current format is general. Otherwise omitted or 0.' };
+const mutationOperationSchemas = [];
+function mutationOperation(type, operation, properties = {}, required = []) {
+  return {
+    type: 'object', additionalProperties: false,
+    required: ['type', 'operation', ...required],
+    properties: { type: { type: 'string', enum: [type] }, operation: { type: 'string', enum: [operation] }, ...properties },
+  };
+}
+for (const type of ['header', 'body']) {
+  const fields = { field: { type: 'string', minLength: 1, description: 'Literal top-level field name; not a path.' }, ...(type === 'header' ? { signature_index: signatureIndex } : {}) };
+  mutationOperationSchemas.push(
+    mutationOperation(type, 'set', { ...fields, value: { description: 'Any JSON value, including null, arrays, and objects.' } }, ['field', 'value']),
+    mutationOperation(type, 'remove', fields, ['field']),
+  );
+}
+mutationOperationSchemas.push(
+  mutationOperation('signature', 'remove', { signature_index: signatureIndex }),
+  mutationOperation('signature', 'replace', { signature_index: signatureIndex, value: { type: 'string', description: 'Exact encoded signature string; not automatically Base64url-encoded.' } }, ['value']),
+  mutationOperation('signature', 'truncate', { signature_index: signatureIndex, length: { type: 'integer', minimum: 0, description: 'Decoded bytes to retain. Cannot exceed the current signature length.' } }, ['length']),
+  mutationOperation('signature', 'flip_bit', { signature_index: signatureIndex, byte_index: { type: 'integer', minimum: 0 }, bit_index: { type: 'integer', minimum: 0, maximum: 7 } }, ['byte_index', 'bit_index']),
+  mutationOperation('format', 'convert', { format: { type: 'string', enum: ['compact', 'flattened', 'general'] } }, ['format']),
+);
+const mutationGroupsSchema = {
+  type: 'array', minItems: 1, maxItems: 32,
+  description: 'POST /mutation only. Each group produces one token independently from the same source. Group operations execute sequentially; no automatic re-signing.',
+  items: {
+    type: 'object', additionalProperties: false, required: ['id', 'operations'],
+    properties: {
+      id: { type: 'string', minLength: 1, description: 'Unique nonblank group identifier.' },
+      operations: { type: 'array', minItems: 1, maxItems: 16, items: { $ref: '#/components/schemas/MutationOperation' } },
+    },
+  },
+};
+const mutationTokenSchema = {
+  oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }],
+  description: 'Compact JWS string or flattened/general JWS JSON object. Imported source limit: 64 KiB, at most 8 signatures. No JWE, detached, or unencoded payloads. Parsing does not verify signatures.',
+};
 
 /**
  * Generate OpenAPI 3.0 specification
@@ -440,6 +479,37 @@ export function getOpenAPISpec(baseUrl) {
           }
         }
       },
+      '/mutation': {
+        post: {
+          tags: ['Mutation-Endpoint'],
+          summary: 'Generate token mutations',
+          description: 'Produce independent variants from an imported token or a generated source. Provide exactly one of token or source, plus explicit mutations groups. Each group starts from the same source and executes its operations sequentially. No automatic re-signing or signature verification. No mode field at the request root. Source generation may select an existing mode. JSON only; no OAuth grants or response_type.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/MutationRequest' },
+                examples: openApiMutationExamples,
+              },
+            },
+          },
+          responses: {
+            '200': {
+              description: 'All mutation groups succeeded. One result per group, in request order.',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/MutationResponse' } } },
+            },
+            '400': {
+              description: 'Invalid request, source, operation, or lossy conversion. Errors identify the group and operation where applicable; no partial results.',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/MutationError' } } },
+            },
+            '405': { description: 'Method not allowed. Use POST.' },
+            '413': {
+              description: 'Request exceeds 1 MiB, source exceeds 64 KiB, or intermediate token/complete response exceeds 1 MiB.',
+              content: { 'application/json': { schema: { $ref: '#/components/schemas/MutationError' } } },
+            },
+          },
+        },
+      },
       '/introspect': {
         post: {
           tags: ['OAuth2-OIDC-Endpoints'],
@@ -719,6 +789,72 @@ export function getOpenAPISpec(baseUrl) {
       }
     },
     components: {
+      schemas: {
+        MutationOperation: { oneOf: mutationOperationSchemas },
+        MutationRequest: {
+          oneOf: [
+            {
+              type: 'object', additionalProperties: false, required: ['token', 'mutations'],
+              properties: { token: mutationTokenSchema, mutations: mutationGroupsSchema },
+            },
+            {
+              type: 'object', additionalProperties: false, required: ['source', 'mutations'],
+              properties: { source: { $ref: '#/components/schemas/MutationSource' }, mutations: mutationGroupsSchema },
+            },
+          ],
+        },
+        MutationSource: {
+          type: 'object', additionalProperties: false,
+          description: 'Generate exactly one source using the existing token generation pipeline. Default mode: fake. Options belong here, claims in body. No grant_type or response_type. Generated source must fit 64 KiB.',
+          properties: {
+            mode: { type: 'string', enum: ['fake', 'fuzz', 'malicious', 'grammar', 'malcious', 'grammer'], default: 'fake' },
+            header: { type: 'object' }, body: { type: 'object' },
+            signature: { oneOf: [{ type: 'string' }, { type: 'boolean' }] },
+            kty: { type: 'string', enum: ['RSA', 'EC'] },
+            format: { type: 'string', enum: ['compact', 'flattened', 'general'] },
+            signatures: { type: 'array', minItems: 1, maxItems: 8, items: { type: 'object' } },
+            confusion: { type: 'object' }, vulnerability: { type: 'string' }, alg_none_variant: { type: 'string' },
+            exclude: { type: 'array', items: { type: 'string' } },
+            malicious_category: { type: 'string' }, grammar_category: { type: 'string' },
+          },
+        },
+        MutationResponse: {
+          type: 'object', additionalProperties: false, required: ['count', 'results'],
+          properties: {
+            count: { type: 'integer', minimum: 1, maximum: 32 },
+            results: { type: 'array', minItems: 1, maxItems: 32, items: { $ref: '#/components/schemas/MutationResult' } },
+          },
+        },
+        MutationError: {
+          type: 'object', required: ['error', 'message'],
+          properties: {
+            error: { type: 'string' }, message: { type: 'string' },
+            group_id: { type: 'string' }, group_index: { type: 'integer', minimum: 0 },
+            operation_index: { type: 'integer', minimum: 0 },
+          },
+        },
+        MutationResult: {
+          type: 'object', required: ['id', 'format', 'token', 'operations', 'changes', 'signatures'],
+          properties: {
+            id: { type: 'string' }, format: { type: 'string', enum: ['compact', 'flattened', 'general'] },
+            token: { oneOf: [{ type: 'string' }, { type: 'object', additionalProperties: true }] },
+            operations: { type: 'array', items: { $ref: '#/components/schemas/MutationOperation' } },
+            changes: {
+              type: 'array', items: { type: 'object', properties: {
+                type: { type: 'string' }, operation: { type: 'string' }, field: { type: 'string' },
+                signature_index: { type: 'integer' }, changed: { type: 'boolean' },
+              } },
+            },
+            signatures: {
+              type: 'array', description: 'Transformation metadata only, not signature validation or vulnerability findings.',
+              items: { type: 'object', properties: {
+                signature_index: { type: 'integer' }, signing_input_changed: { type: 'boolean' },
+                signature_action: { type: 'string', enum: ['preserved', 'removed', 'modified'] },
+              } },
+            },
+          },
+        },
+      },
       securitySchemes: {
         basicAuth: {
           type: 'http',
