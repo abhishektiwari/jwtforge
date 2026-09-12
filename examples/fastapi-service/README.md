@@ -91,7 +91,9 @@ The example also includes `Axioms_FastAPI_JWT_Vulnerabilities.postman_collection
 It covers:
 
 - Algorithm confusion: `alg: none`, `nOne`, and RS/HS substitution
+- Signature tampering: removal, literal replacement, truncation, and a one-bit change derived from the accepted baseline token
 - Key injection: `kid` traversal, self-asserted `jku`, and embedded `jwk`
+- Format confusion: flattened and general JWS JSON bearer values
 - Malicious claim robustness: signed tokens with injection-style claim values
 
 Run it with Newman:
