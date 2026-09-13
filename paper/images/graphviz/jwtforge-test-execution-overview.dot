@@ -1,0 +1,99 @@
+digraph jwtforge_test_execution {
+    graph [
+        rankdir=TB,
+        bgcolor="white",
+        fontname="Helvetica,Arial,sans-serif",
+        pad=0.12,
+        margin=0.04,
+        nodesep=0.42,
+        ranksep=0.55,
+        splines=polyline,
+        outputorder=edgesfirst,
+        compound=true
+    ]
+
+    node [
+        shape=box,
+        style="filled,rounded",
+        fontname="Helvetica,Arial,sans-serif",
+        fontsize=10,
+        margin="0.13,0.09",
+        color="#455A64",
+        penwidth=1.1
+    ]
+
+    edge [
+        fontname="Helvetica,Arial,sans-serif",
+        fontsize=9,
+        color="#455A64",
+        penwidth=1.1,
+        arrowsize=0.75
+    ]
+
+    jwtforge [
+        label="JWTForge\n\nPOST /token\nPOST /mutation",
+        fillcolor="#E8F5E9"
+    ]
+
+    target [
+        label="Protected API / Service\n\nJWT Library\n+ Application Policy",
+        fillcolor="#FCE4EC"
+    ]
+
+    subgraph cluster_suite {
+        label="Test Suite / CI / Pentest Harness";
+        labelloc=t;
+        labeljust=c;
+        fontname="Helvetica,Arial,sans-serif";
+        fontsize=11;
+        color="#90A4AE";
+        penwidth=1.1;
+        style="rounded";
+        margin=14;
+
+        scenario [
+            label="Define Target Operation\n+ Token Scenario",
+            fillcolor="#E8F4F8"
+        ]
+
+        corpus [
+            label="Baseline Token\n+ Controlled Variants\n\nCompact JWT or\nJWS JSON Serialization",
+            fillcolor="#FFF4E6"
+        ]
+
+        execute [
+            label="Execute Protected Request",
+            fillcolor="#E8F4F8"
+        ]
+
+        evaluation [
+            label="Evaluate Response\n\nCompare with baseline;\nassert or report findings",
+            fillcolor="#E8F4F8"
+        ]
+
+        { rank=same; scenario; corpus; evaluation }
+
+        scenario -> corpus [style=invis, weight=10]
+        corpus -> evaluation [style=invis, weight=10]
+
+        corpus -> execute [
+            label="3. Select token"
+        ]
+    }
+
+    scenario -> jwtforge [
+        label="1. Request token(s)\nwith selected mode or operations"
+    ]
+
+    jwtforge -> corpus [
+        label="2. Return signed baseline\nor mutation batch"
+    ]
+
+    execute -> target [
+        label="4. Call protected operation\nAuthorization: Bearer <JWT>\n(or configured token carrier)"
+    ]
+
+    target -> evaluation [
+        label="5. Return HTTP status, body,\nheaders, and latency"
+    ]
+}

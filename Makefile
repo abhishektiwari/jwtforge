@@ -232,12 +232,14 @@ test-prod:
 
 # Clean build artifacts and dependencies
 clean:
-	rm -rf node_modules
+	find . -type d \( -name node_modules -o -name __pycache__ -o -name generated \) -prune -exec rm -rf {} +
 	rm -rf .wrangler
+	rm -rf .cache
+	rm -rf coverage
 	rm -rf .docusaurus
 	rm -rf build
 	rm -rf test-results-*.json
-	@echo "Cleaned node_modules, .wrangler, Docusaurus build artifacts, and test results"
+	@echo "Cleaned dependency, Python cache, generated, and build artifacts"
 
 # Login to Cloudflare
 login:

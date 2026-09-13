@@ -95,6 +95,7 @@ It covers:
 - Key injection: `kid` traversal, self-asserted `jku`, and embedded `jwk`
 - Format confusion: flattened and general JWS JSON bearer values
 - Malicious claim robustness: signed tokens with injection-style claim values
+- Claim-type error handling: a correctly signed token with `exp: null`, tested separately for non-acceptance and a graceful `401`/`403` response
 
 Run it with Newman:
 

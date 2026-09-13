@@ -23,6 +23,8 @@ npm run dev
 
 JWTForge is architected for high-throughput token generation. Local performance testing on a Mac M2 Pro with 16 GB RAM demonstrated sustained throughput of 586 requests per second with 12 ms average response time and zero error rate across 74,315 requests.
 
+A reproducible Python/Locust harness is provided in `examples/locust-load-test`. It separates warm-up from measurement, validates the token response contract, records CSV and HTML artifacts, and reports p50, p95, and p99 latency in addition to throughput and failures. Its default `fake` workload and optional fuzz, malicious, grammar, and mixed profiles must be reported separately because they exercise different generation costs.
+
 These results show that JWTForge can sustain hundreds of concurrent token generation requests with sub-20 ms latency, making it suitable for integration testing, CI/CD pipelines, and moderate-scale fuzzing campaigns. The consistent throughput and zero error rate indicate stable handling of sustained local load without observed degradation during the benchmark run.
 
 ![JWTForge performance benchmark showing 586 requests per second throughput and 12 ms average response time over 74,315 requests.](/img/performance-benchmark.png)

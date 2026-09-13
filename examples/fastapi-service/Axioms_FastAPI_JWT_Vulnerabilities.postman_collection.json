@@ -1121,6 +1121,93 @@
           }
         }
       ]
+    },
+    {
+      "name": "7. Claim Type Error Handling",
+      "description": "Exercise malformed registered-claim types through the framework boundary and distinguish non-acceptance from graceful HTTP authentication failure.",
+      "item": [
+        {
+          "name": "Generate Null Expiration Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('JWTForge returned null-expiration token', function () {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.access_token).to.exist;",
+                  "    pm.collectionVariables.set('attack_token', jsonData.access_token);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"fake\",\n  \"body\": {\n    \"iss\": \"{{issuer}}\",\n    \"aud\": \"{{audience}}\",\n    \"sub\": \"null-expiration-subject\",\n    \"jti\": \"fastapi-null-expiration\",\n    \"exp\": null\n  }\n}"
+            },
+            "url": {
+              "raw": "{{jwtforge_url}}/token",
+              "host": [
+                "{{jwtforge_url}}"
+              ],
+              "path": [
+                "token"
+              ]
+            },
+            "description": "Generate a correctly signed token whose exp member is JSON null instead of the NumericDate required by RFC 7519."
+          }
+        },
+        {
+          "name": "Protected Endpoint Handles Null Expiration",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('null_exp_response_status', String(pm.response.code));",
+                  "pm.test('Null-expiration token is not authenticated', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Malformed claim produces a graceful authentication response', function () {",
+                  "    pm.expect([401, 403]).to.include(pm.response.code);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{attack_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/protected",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "protected"
+              ]
+            },
+            "description": "The token must not authenticate; a 401 or 403 is a graceful rejection, whereas a 5xx response is an unexpected application exception."
+          }
+        }
+      ]
     }
   ]
 }

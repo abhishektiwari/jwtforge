@@ -1,0 +1,15 @@
+{
+  "name": "jwtforge-library-differential-example",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Differential JWT verification experiment driven by JWTForge",
+  "scripts": {
+    "experiment": "node experiment.mjs"
+  },
+  "dependencies": {
+    "fast-jwt": "6.3.3",
+    "jose": "6.2.12",
+    "jsonwebtoken": "9.0.3"
+  }
+}
