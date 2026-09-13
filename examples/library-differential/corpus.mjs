@@ -1,28 +1,29 @@
-const both = expectation => ({ default: expectation, configured: expectation });
+const both = expectation => ({ 'policy-unconfigured': expectation, configured: expectation });
 
 const audienceProfileCaseIds = {
   'scalar-audience': {
-    default: 'scalar-audience-without-expected-audience-config',
+    'policy-unconfigured': 'scalar-audience-without-expected-audience-config',
     configured: 'scalar-audience-with-expected-audience-config',
   },
   'array-audience': {
-    default: 'array-audience-without-expected-audience-config',
+    'policy-unconfigured': 'array-audience-without-expected-audience-config',
     configured: 'array-audience-with-expected-audience-config',
   },
   'unexpected-audience': {
-    default: 'unexpected-audience-without-expected-audience-config',
+    'policy-unconfigured': 'unexpected-audience-without-expected-audience-config',
     configured: 'unexpected-audience-with-expected-audience-config',
   },
 };
 
-function caseRecord(id, category, expectations, description, token, generationRequest) {
+function caseRecord(id, category, expectations, description, token, generationRequest, metadata = {}) {
   return {
     id, category, expectations, description, generation_request: generationRequest, token,
+    ...metadata,
     ...(audienceProfileCaseIds[id] ? { profile_case_ids: audienceProfileCaseIds[id] } : {}),
   };
 }
 
-export async function buildCorpus({ jwtforgeUrl, corpusParameters }) {
+export async function buildCorpus({ jwtforgeUrl, corpusParameters, generatorRevision }) {
   const generationRequests = {};
   const configuredPolicy = {
     algorithms: ['RS256'],
@@ -56,6 +57,7 @@ export async function buildCorpus({ jwtforgeUrl, corpusParameters }) {
       ...options,
       body: {
         sub: 'differential-subject',
+        jti: `differential-${id}`,
         iss: corpusParameters.issuer,
         // JWTForge always emits aud. A known-good value prevents audience
         // validation from confounding experiments about another dimension.
@@ -79,24 +81,24 @@ export async function buildCorpus({ jwtforgeUrl, corpusParameters }) {
   const directDefinitions = [
     {
       id: 'scalar-audience',
-      category: 'audience', expectations: { default: 'observe', configured: 'accept' },
-      description: 'Token contains the expected scalar audience; the default profile supplies no expected audience.',
+      category: 'audience', expectations: { 'policy-unconfigured': 'observe', configured: 'accept' },
+      description: 'Token contains the expected scalar audience; the policy-unconfigured profile supplies no expected audience.',
       body: { ...common, aud: corpusParameters.audience },
     },
     {
       id: 'array-audience',
-      category: 'audience', expectations: { default: 'observe', configured: 'accept' },
-      description: 'Token contains an audience array including the expected value; the default profile supplies no expected audience.',
+      category: 'audience', expectations: { 'policy-unconfigured': 'observe', configured: 'accept' },
+      description: 'Token contains an audience array including the expected value; the policy-unconfigured profile supplies no expected audience.',
       body: { ...common, aud: [corpusParameters.audience, 'https://secondary.example'] },
     },
     {
       id: 'unexpected-audience',
-      category: 'audience', expectations: { default: 'observe', configured: 'reject' },
+      category: 'audience', expectations: { 'policy-unconfigured': 'observe', configured: 'reject' },
       description: 'Token contains an unexpected audience; only the configured profile supplies the expected audience.',
       body: { ...common, aud: 'https://unexpected-audience.example' },
     },
     {
-      id: 'alternate-issuer', category: 'issuer', expectations: { default: 'observe', configured: 'reject' },
+      id: 'alternate-issuer', category: 'issuer', expectations: { 'policy-unconfigured': 'observe', configured: 'reject' },
       description: 'Token contains a different issuer; only the configured profile supplies the expected issuer.',
       body: { ...common, iss: 'https://wrong-issuer.example' },
     },
@@ -133,12 +135,12 @@ export async function buildCorpus({ jwtforgeUrl, corpusParameters }) {
       description: 'Unsigned token declares alg=none.', body: common, options: { vulnerability: 'alg_none' },
     },
     {
-      id: 'rs-hs-confusion', category: 'algorithm', expectations: both('reject'),
+      id: 'rsa-signature-with-hs256-header', category: 'algorithm', expectations: both('reject'),
       description: 'Header declares HS256 while JWTForge signs with the RSA key.', body: common,
       options: { vulnerability: 'rs_hs_confusion' },
     },
     {
-      id: 'untrusted-jku-header', category: 'key-reference', expectations: { default: 'observe', configured: 'reject' },
+      id: 'untrusted-jku-header', category: 'key-reference', expectations: { 'policy-unconfigured': 'observe', configured: 'reject' },
       description: 'Correctly signed token includes a jku outside the configured allowlist; no adapter fetches it.',
       body: common, options: { vulnerability: 'jku_injection' },
     },
@@ -179,14 +181,23 @@ export async function buildCorpus({ jwtforgeUrl, corpusParameters }) {
   };
   const mutationCases = mutation.results.map(result => {
     const [category, expectations, description] = mutationMetadata[result.id];
-    return caseRecord(result.id, category, expectations, description, result.token, 'mutation-batch');
+    const { token, ...recordedMutationMetadata } = result;
+    return caseRecord(result.id, category, expectations, description, token, 'mutation-batch', {
+      mutation_metadata: recordedMutationMetadata,
+    });
   });
 
   generationRequests.jwks = { endpoint: '/.well-known/jwks.json', method: 'GET' };
   return {
-    schema_version: 3,
+    schema_version: 4,
     generated_at: new Date(generatedAt * 1000).toISOString(),
-    generator: { name: 'JWTForge', url: jwtforgeUrl },
+    generator: { name: 'JWTForge', url: jwtforgeUrl, ...generatorRevision },
+    reference_clock: {
+      epoch_seconds: generatedAt,
+      iso8601: new Date(generatedAt * 1000).toISOString(),
+      verifier_clock_tolerance_seconds: 0,
+      strategy: 'Timing cases are regenerated relative to each run; retained tokens exactly preserve the evaluated artifacts.',
+    },
     corpus_parameters: corpusParameters,
     configured_policy: configuredPolicy,
     generation_requests: generationRequests,

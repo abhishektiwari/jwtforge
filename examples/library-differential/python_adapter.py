@@ -5,19 +5,27 @@ from __future__ import annotations
 
 import base64
 import json
+import signal
 import sys
 from pathlib import Path
 from typing import Any, Callable
 
 import jwt as pyjwt
 from authlib.jose import JsonWebKey, JsonWebToken, jwt as authlib_jwt
+from authlib.jose.errors import JoseError as AuthlibJoseError
+from jose.exceptions import JOSEError as PythonJoseError
 from jose import jwt as python_jose_jwt
+from joserfc.errors import JoseError as JoseRFCError
 from joserfc import jwt as joserfc_jwt
 from joserfc.jwk import import_key as import_joserfc_key
 from joserfc.jwt import JWTClaimsRegistry
 
 
 Verifier = Callable[[Any, Any, dict[str, Any]], dict[str, Any]]
+
+
+class ConfiguredJkuPolicyError(ValueError):
+    """Raised by the experiment's disclosed application-level jku policy."""
 
 
 def require_compact(token: Any) -> str:
@@ -32,7 +40,7 @@ def enforce_jku_policy(token: str, policy: dict[str, Any]) -> None:
     header = json.loads(base64.urlsafe_b64decode(encoded).decode("utf-8"))
     jku = header.get("jku")
     if jku is not None and jku != policy["allowed_jku"]:
-        raise ValueError(f"jku is not allowlisted: {jku}")
+        raise ConfiguredJkuPolicyError(f"jku is not allowlisted: {jku}")
 
 
 def verify_pyjwt_default(token: Any, key: Any, policy: dict[str, Any]) -> dict[str, Any]:
@@ -106,8 +114,25 @@ def classify(
     key: Any,
     policy: dict[str, Any],
 ) -> dict[str, Any]:
+    if not isinstance(case["token"], str):
+        return {
+            "case_id": case["id"],
+            "experiment_id": case.get("profile_case_ids", {}).get(profile, case["id"]),
+            "library": library, "language": "Python", "profile": profile,
+            "status": "unsupported", "verification_attempted": False,
+            "verification_decision": "not-attempted", "error_classification": None,
+            "interface_classification": "compact-jwt-only-precheck",
+            "error_class": "UnsupportedSerialization",
+            "message": "JWT decoder accepts compact serialization only",
+        }
+
+    def timeout_handler(_signum: int, _frame: Any) -> None:
+        raise TimeoutError("verification exceeded 5 seconds")
+
+    previous_handler = signal.signal(signal.SIGALRM, timeout_handler)
+    signal.setitimer(signal.ITIMER_REAL, 5.0)
     try:
-        compact = require_compact(case["token"])
+        compact = case["token"]
         if profile == "configured":
             # Common application policy; the libraries have no uniform native
             # jku allowlist option and this code never dereferences the URL.
@@ -117,22 +142,45 @@ def classify(
             "case_id": case["id"],
             "experiment_id": case.get("profile_case_ids", {}).get(profile, case["id"]),
             "library": library, "language": "Python",
-            "profile": profile, "status": "accepted", "subject": claims.get("sub"),
+            "profile": profile, "status": "accepted", "verification_attempted": True,
+            "verification_decision": "accepted", "error_classification": None,
+            "subject": claims.get("sub"),
         }
-    except NotImplementedError as error:
-        status = "unsupported"
+    except TimeoutError as error:
+        status = "rejected"
+        classification = "timeout"
         error_class = type(error).__name__
         message = str(error)
     except Exception as error:  # Each library exposes its own rejection hierarchy.
         status = "rejected"
+        documented_types = {
+            "PyJWT": pyjwt.exceptions.PyJWTError,
+            "Authlib": AuthlibJoseError,
+            "joserfc": JoseRFCError,
+            "python-jose": PythonJoseError,
+        }
+        classification = (
+            "documented-validation-exception"
+            if isinstance(error, (documented_types[library], ConfiguredJkuPolicyError))
+            else "other-exception"
+        )
         error_class = type(error).__name__
         message = str(error)
+    except BaseException as error:
+        status = "rejected"
+        classification = "crash"
+        error_class = type(error).__name__
+        message = str(error)
+    finally:
+        signal.setitimer(signal.ITIMER_REAL, 0)
+        signal.signal(signal.SIGALRM, previous_handler)
 
     return {
         "case_id": case["id"],
         "experiment_id": case.get("profile_case_ids", {}).get(profile, case["id"]),
         "library": library, "language": "Python",
-        "profile": profile, "status": status,
+        "profile": profile, "status": status, "verification_attempted": True,
+        "verification_decision": "rejected", "error_classification": classification,
         "error_class": error_class, "message": message,
     }
 
@@ -152,10 +200,10 @@ def main() -> int:
         "python-jose": jwk,
     }
     adapters: dict[str, dict[str, Verifier]] = {
-        "PyJWT": {"default": verify_pyjwt_default, "configured": verify_pyjwt_configured},
-        "Authlib": {"default": verify_authlib_default, "configured": verify_authlib_configured},
-        "joserfc": {"default": verify_joserfc_default, "configured": verify_joserfc_configured},
-        "python-jose": {"default": verify_python_jose_default, "configured": verify_python_jose_configured},
+        "PyJWT": {"policy-unconfigured": verify_pyjwt_default, "configured": verify_pyjwt_configured},
+        "Authlib": {"policy-unconfigured": verify_authlib_default, "configured": verify_authlib_configured},
+        "joserfc": {"policy-unconfigured": verify_joserfc_default, "configured": verify_joserfc_configured},
+        "python-jose": {"policy-unconfigured": verify_python_jose_default, "configured": verify_python_jose_configured},
     }
 
     results: list[dict[str, Any]] = []

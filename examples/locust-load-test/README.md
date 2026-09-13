@@ -70,6 +70,8 @@ The UI is intended for interactive exploration. It does not automatically separa
 
 Stop the Locust server with Ctrl+C.
 
+An interactive UI report includes the user-count history and timing percentiles but does not record the configured spawn rate or create a distinct warm-up interval. For a publication artifact that must retain all workload parameters and exclude warm-up, use the headless runner below.
+
 ## Run headlessly
 
 Run the default measured experiment:

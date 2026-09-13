@@ -17,11 +17,17 @@ const corpusParameters = {
   audience: process.env.JWT_AUDIENCE || 'https://library-differential.example',
 };
 
+function commandOutput(command, args) {
+  const result = spawnSync(command, args, { cwd: path.resolve(here, '../..'), encoding: 'utf8' });
+  return result.status === 0 ? result.stdout.trim() : 'unavailable';
+}
+
 function runPythonAdapters(corpusPath) {
   const process = spawnSync(python, [path.join(here, 'python_adapter.py'), corpusPath], {
     cwd: here,
     encoding: 'utf8',
     maxBuffer: 10 * 1024 * 1024,
+    timeout: 120_000,
   });
   if (process.error) throw process.error;
   if (process.status !== 0) {
@@ -36,7 +42,14 @@ function runPythonAdapters(corpusPath) {
 
 async function main() {
   await mkdir(outDir, { recursive: true });
-  const corpus = await buildCorpus({ jwtforgeUrl, corpusParameters });
+  const corpus = await buildCorpus({
+    jwtforgeUrl,
+    corpusParameters,
+    generatorRevision: {
+      release: commandOutput('node', ['-p', "require('./package.json').version"]),
+      commit: commandOutput('git', ['rev-parse', 'HEAD']),
+    },
+  });
   const corpusPath = path.join(outDir, 'corpus.json');
   await writeFile(corpusPath, `${JSON.stringify(corpus, null, 2)}\n`);
 
@@ -49,7 +62,8 @@ async function main() {
   const reportPath = path.join(outDir, 'report.md');
   const resultDocument = {
     corpus: path.relative(outDir, corpusPath),
-    adapter_profiles: ['default', 'configured'],
+    adapter_profiles: ['policy-unconfigured', 'configured'],
+    verification_started_at: new Date().toISOString(),
     analysis,
     results,
   };
@@ -62,7 +76,8 @@ async function main() {
   for (const [profile, profileAnalysis] of Object.entries(analysis.profiles)) {
     console.log(`${profile} signed control accepted by all libraries: ${profileAnalysis.control_all_accepted ? 'yes' : 'no'}`);
     console.log(`${profile} divergent cases: ${profileAnalysis.divergent_cases.join(', ') || 'none'}`);
-    console.log(`${profile} cases outside the declared expectation: ${profileAnalysis.nonconforming_cases.join(', ') || 'none'}`);
+    console.log(`${profile} required cases outside the declared expectation: ${profileAnalysis.failed_required_cases.join(', ') || 'none'}`);
+    console.log(`${profile} observational cases (no acceptance requirement): ${profileAnalysis.observational_cases.length}`);
   }
 }
 
