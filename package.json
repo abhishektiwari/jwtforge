@@ -62,8 +62,8 @@
     "jest": "^30.4.2",
     "newman": "^6.2.2",
     "prism-react-renderer": "^2.4.1",
-    "react": "^19.2.8",
-    "react-dom": "^19.2.8",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
     "wrangler": "^4.100.0"
   }
 }
